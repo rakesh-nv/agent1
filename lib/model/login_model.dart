@@ -13,6 +13,22 @@ class LoginResponse {
     this.timestamp,
   });
 
+  LoginResponse copyWith({
+    bool? success,
+    int? statusCode,
+    String? message,
+    LoginData? data,
+    String? timestamp,
+  }) {
+    return LoginResponse(
+      success: success ?? this.success,
+      statusCode: statusCode ?? this.statusCode,
+      message: message ?? this.message,
+      data: data ?? this.data,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
       success: json["success"] ?? false,
@@ -37,6 +53,10 @@ class LoginData {
   final User user;
 
   LoginData({required this.token, required this.user});
+
+  LoginData copyWith({String? token, User? user}) {
+    return LoginData(token: token ?? this.token, user: user ?? this.user);
+  }
 
   factory LoginData.fromJson(Map<String, dynamic> json) {
     return LoginData(
@@ -84,6 +104,46 @@ class User {
     required this.isBlocked,
     required this.lastLogin,
   });
+
+  User copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? mobile,
+    String? userType,
+    String? grade,
+    String? reportingTo,
+    bool? isAllBranches,
+    bool? isAllCategories,
+    List<String>? selectedBranches,
+    List<String>? selectedCategories,
+    List<String>? selectedBranchAliases,
+    List<String>? selectedCategoryNames,
+    Template? templateId,
+    bool? isBlocked,
+    String? lastLogin,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      mobile: mobile ?? this.mobile,
+      userType: userType ?? this.userType,
+      grade: grade ?? this.grade,
+      reportingTo: reportingTo ?? this.reportingTo,
+      isAllBranches: isAllBranches ?? this.isAllBranches,
+      isAllCategories: isAllCategories ?? this.isAllCategories,
+      selectedBranches: selectedBranches ?? this.selectedBranches,
+      selectedCategories: selectedCategories ?? this.selectedCategories,
+      selectedBranchAliases:
+          selectedBranchAliases ?? this.selectedBranchAliases,
+      selectedCategoryNames:
+          selectedCategoryNames ?? this.selectedCategoryNames,
+      templateId: templateId ?? this.templateId,
+      isBlocked: isBlocked ?? this.isBlocked,
+      lastLogin: lastLogin ?? this.lastLogin,
+    );
+  }
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(

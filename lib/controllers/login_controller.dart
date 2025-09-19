@@ -134,7 +134,7 @@ class LoginController extends GetxController {
           loginModel.data!.user.selectedBranchAliases,
           loginModel.data!.user.selectedCategoryNames,
           loginModel.data!.user.templateId.id,
-          loginModel.data!.user.templateId.templateName ?? '',
+          loginModel.data!.user.templateId.templateName,
           loginModel.data!.user.isBlocked,
           loginModel.data!.user.lastLogin,
         );
@@ -197,5 +197,30 @@ class LoginController extends GetxController {
     savedPassword.value = null;
     loginResponse.value = null;
     Get.offAll(() => const LoginScreen());
+  }
+
+  // New method to update login response data after profile update
+  Future<void> updateLoginResponseUserData(User newUserData) async {
+    if (loginResponse.value != null) {
+      // Create an updated LoginData object with the new user data
+      final updatedLoginData = loginResponse.value!.data!.copyWith(
+        user: newUserData,
+      );
+      loginResponse.value = loginResponse.value!.copyWith(
+        data: updatedLoginData,
+      );
+
+      // Also update individual stored values that might be displayed directly
+      final box = Hive.box('myBox');
+      await box.put(AppConstants.userName, newUserData.name);
+      await box.put(AppConstants.userMobile, newUserData.mobile);
+      // Update other fields as necessary if they are directly displayed elsewhere
+
+      // Resave the entire login response JSON to ensure all fields are up-to-date
+      await box.put(
+        AppConstants.loginResponse,
+        jsonEncode(loginResponse.value!.toJson()),
+      );
+    }
   }
 }
