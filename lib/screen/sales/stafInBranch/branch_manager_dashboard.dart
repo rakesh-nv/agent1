@@ -1429,6 +1429,7 @@ class SalesVSPromiseInfoRow extends StatelessWidget {
 
         return Column(
           children: [
+            SizedBox(height: SizeConfig.h(10)),
             Padding(
               padding: const EdgeInsets.only(left: 10),
               child: Align(

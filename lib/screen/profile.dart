@@ -9,6 +9,7 @@ import 'package:mbindiamy/controllers/login_controller.dart';
 import 'package:mbindiamy/controllers/reporting_controller.dart';
 
 import '../controllers/branch_manager_controller/sales_comparison_controller.dart';
+import '../controllers/profile_controller.dart';
 import '../controllers/total_sales_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -38,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       Get.find<ReportingManagerController>();
   final SalesComparisonController salesComparisonController = Get.find<SalesComparisonController>();
   final TotalSalesController totalSalesController = Get.find<TotalSalesController>();
+  final profileController = Get.find<ProfileController>();
 
   final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
@@ -291,12 +293,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                   //   ),
                                   // ),
                                   SizedBox(height: AppStyle.h(3)),
+
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _AnimatedButton(
-                                          text: 'Cancel',
-                                          onPressed: _isUpdating
+                                        child: ElevatedButton(
+                                          onPressed: profileController.isLoading.value
                                               ? null
                                               : () {
                                                   if (_formKey.currentState != null) {
@@ -310,61 +312,79 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                                   _bottomSheetController.reverse();
                                                   Navigator.pop(context);
                                                 },
-                                          color: Colors.grey.shade200,
-                                          textColor: Colors.black87,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.grey.shade200,
+                                            foregroundColor: Colors.black87,
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Text('Cancel'),
                                         ),
                                       ),
                                       SizedBox(width: AppStyle.w(3)),
                                       Expanded(
-                                        child: _AnimatedButton(
-                                          text: _isUpdating ? 'Saving...' : 'Save',
-                                          onPressed: _isUpdating
-                                              ? null
-                                              : () async {
-                                                  if (_formKey.currentState!.validate()) {
-                                                    if (user.userType != 'head' &&
-                                                        _selectedBranchId == null) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Branch ID is required'),
-                                                        ),
-                                                      );
-                                                      return;
-                                                    }
-                                                    setState(() {
-                                                      _isUpdating = true;
-                                                    });
+                                        child: Obx(
+                                          () => ElevatedButton(
+                                            onPressed: profileController.isLoading.value
+                                                ? null
+                                                : () async {
+                                                    if (_formKey.currentState!.validate()) {
+                                                      // if (user.userType != 'head' && _selectedBranchId == null) {
+                                                      //   ScaffoldMessenger.of(context).showSnackBar(
+                                                      //     const SnackBar(
+                                                      //       content: Text('Branch ID is required'),
+                                                      //     ),
+                                                      //   );
+                                                      //   return;
+                                                      // }
 
-                                                    // TODO: Implement API call to update profile
-                                                    await Future.delayed(
-                                                      const Duration(milliseconds: 500),
-                                                    );
-                                                    setState(() {
-                                                      _isUpdating = false;
-                                                    });
-                                                    _bottomSheetController.reverse();
-                                                    Navigator.pop(context);
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Profile updated successfully!',
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                          color: _isUpdating ? Colors.grey : AppStyle.appBarColor,
-                                          textColor: Colors.white,
-                                          gradient: _isUpdating
-                                              ? null
-                                              : LinearGradient(
-                                                  colors: [
-                                                    AppStyle.appBarColor,
-                                                    AppStyle.appBarColor.withOpacity(0.7),
-                                                  ],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                ),
+                                                      await profileController.updateProfile(
+                                                        id: user.id,
+                                                        name: _nameController.text.trim(),
+                                                        email: _emailController.text.trim(),
+                                                        mobile: _phoneController.text.trim(),
+                                                      );
+
+                                                      if (profileController.errorMessage.value !=
+                                                          null) {
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              profileController.errorMessage.value!,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        _bottomSheetController.reverse();
+                                                        Navigator.pop(context);
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'Profile updated successfully!',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: profileController.isLoading.value
+                                                  ? Colors.grey
+                                                  : AppStyle.appBarColor,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              profileController.isLoading.value
+                                                  ? 'Saving...'
+                                                  : 'Save',
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],

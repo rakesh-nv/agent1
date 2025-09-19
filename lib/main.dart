@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mbindiamy/screen/businessHead/business_head_dashboard.dart';
-
 import 'package:mbindiamy/controllers/branch_manager_controller/BranchManagerSalesVsPromiseController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/sales_comparison_controller.dart';
@@ -30,6 +29,8 @@ import 'package:mbindiamy/style/appstyle.dart';
 import 'package:mbindiamy/utils/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'controllers/profile_controller.dart';
+
 void main() async {
   // WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter(); // Initialize Hive
@@ -48,7 +49,7 @@ void main() async {
   Get.put(SalesbranchController());
   Get.put(SalesComparisonController());
   Get.put(SubordinatesSalesVsPromiseController());
-
+  Get.put(ProfileController());
   runApp(const MyApp());
 }
 
