@@ -37,7 +37,9 @@ class SubordinatesSalesVsPromiseApiServices extends GetConnect {
         body: requestBody,
       );
 
-      debugPrint('---------------getSubordinatesSalesVsPromise--------------:  ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}',);
+      debugPrint(
+        '---------------getSubordinatesSalesVsPromise--------------:  ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}',
+      );
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);

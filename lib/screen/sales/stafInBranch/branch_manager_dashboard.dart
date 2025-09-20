@@ -4,20 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/BranchManagerSalesVsPromiseController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
-import 'package:mbindiamy/controllers/total_sales_controller.dart' show TotalSalesController;
+import 'package:mbindiamy/controllers/total_sales_controller.dart'
+    show TotalSalesController;
 import 'package:mbindiamy/widget/appbar_widget.dart';
 
 import '../../../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../../../controllers/login_controller.dart';
+import '../../../controllers/promise_actual_controller.dart';
 import '../../../controllers/reporting_controller.dart';
 import '../../../controllers/subordinates_sales_vs_promise_controller.dart';
 import '../../../controllers/top_articles_controller.dart';
 
 // import '../../../controllers/promise_actual_controller.dart';
 import '../../../model/subordinates_sales_vs_promise_model.dart';
-import '../../../model/top_artical_model.dart';
+import '../../../model/top_artical_model.dart' as TopArticleData;
 import '../../../widget/navigator_widget.dart';
 import 'package:get/get.dart';
+import '../../../controllers/ArticleWithMrpAndStockController.dart';
+import '../../../model/ArticlesWithMrpAndStock_model.dart'
+    as ArticleMrpStockData;
 
 // Utility class for responsive sizing
 class SizeConfig {
@@ -51,21 +56,31 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   int currentSet = 0; // For Promise vs Actual pagination
   int currentIndex = 0; // For Top Articles pagination
   final PageController _pageController = PageController();
-  final ScrollController _mainScrollController = ScrollController(); // Added for main scrollbar
+  final ScrollController _mainScrollController =
+      ScrollController(); // Added for main scrollbar
   final LoginController loginController = Get.find<LoginController>();
-  final ReportingManagerController reportingController = Get.find<ReportingManagerController>();
-  final TotalSalesController totalSalesController = Get.find<TotalSalesController>();
-  final SalesComparisonController salesComparisonController = Get.find<SalesComparisonController>();
+  final ReportingManagerController reportingController =
+      Get.find<ReportingManagerController>();
+  final TotalSalesController totalSalesController =
+      Get.find<TotalSalesController>();
+  final SalesComparisonController salesComparisonController =
+      Get.find<SalesComparisonController>();
 
   final CategoryWiseSalesController categoryWiseSalesController =
       Get.find<CategoryWiseSalesController>();
-  final TopArticlesController topArticlesController = Get.find<TopArticlesController>();
-  final BranchManagerSalesVsPromiseController branchManagerSalesVsPromiseController =
+  final TopArticlesController topArticlesController =
+      Get.find<TopArticlesController>();
+  final BranchManagerSalesVsPromiseController
+  branchManagerSalesVsPromiseController =
       Get.find<BranchManagerSalesVsPromiseController>();
-  final SubordinatesSalesVsPromiseController subordinatesSalesVsPromiseController = Get.find();
+  final SubordinatesSalesVsPromiseController
+  subordinatesSalesVsPromiseController = Get.find();
+  final PromiseActualController promiseController =
+      Get.find<PromiseActualController>();
 
   // final PromiseActualController promiseController =
   //     Get.find<PromiseActualController>();
+  final ArticleController articleController = Get.find<ArticleController>();
 
   @override
   void initState() {
@@ -77,6 +92,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
   Future<void> _loadDashboardData() async {
     try {
+      print("start");
       await Future.wait([
         reportingController.getReportingManager().catchError((e) {
           debugPrint("Reporting error: $e");
@@ -96,21 +112,32 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         topArticlesController.loadTopArticles().catchError((e) {
           debugPrint("loadTopArticles error");
         }),
-        branchManagerSalesVsPromiseController.fetchSalesVsPromiseData().catchError((e) {
-          debugPrint("fetchSalesVsPromiseData error");
+        branchManagerSalesVsPromiseController
+            .fetchSalesVsPromiseData()
+            .catchError((e) {
+              debugPrint("fetchSalesVsPromiseData error");
+            }),
+        subordinatesSalesVsPromiseController
+            .fetchSubordinatesSalesVsPromise()
+            .catchError((e) {
+              debugPrint("fetchSubordinatesSalesVsPromise error");
+            }),
+        promiseController.loadPromiseActualData().catchError((e) {
+          debugPrint("loadPromiseActualData error");
         }),
-        subordinatesSalesVsPromiseController.fetchSubordinatesSalesVsPromise().catchError((e) {
-          debugPrint("fetchSubordinatesSalesVsPromise error");
+        articleController.fetchArticles().catchError((e) {
+          debugPrint("ArticleController error: $e");
         }),
 
         // promiseController.loadPromiseActualData().catchError((e) {
         //   debugPrint("PromiseActualController error: $e");
         // }),
       ]);
+      print("end");
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading dashboard data: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading dashboard data: $e')),
+      );
     }
   }
 
@@ -125,7 +152,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     if (currentIndex < length - 1) {
       setState(() {
         currentIndex++;
-        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeIn,
+        );
       });
     }
   }
@@ -175,8 +205,108 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
       if (userType == 'head' || isAllBranches == true) {
         userId = 'All Branches';
-      } else if (selectedBranchAliases.isNotEmpty == true) {
-        userId = selectedBranchAliases.first;
+      } else if (selectedBranchAliases.isNotEmpty) {
+        // Join all branch aliases into a single string
+        userId = selectedBranchAliases.join(', ');
+      }
+    }
+
+    // Get promise vs actual data from PromiseActualController
+    final allDailyValues = (promiseController.data.value?.data.locations ?? [])
+        .expand((location) => location.dailyValues)
+        .map(
+          (dailyValue) => {
+            "date": dailyValue.date.toString(),
+            "day": dailyValue.date.day,
+            "promise": dailyValue.promise,
+            "actual": dailyValue.actual,
+          },
+        )
+        .toList();
+
+    // Get phase data from SalesByPhaseController
+    // final phaseData = {
+    //   "currentPhase":
+    //       salesPhaseController.salesData.value?.data.currentPhase ??
+    //       "Loading...",
+    //   "phase1": (salesPhaseController.salesData.value?.data.phase1 ?? 0)
+    //       .toDouble(),
+    //   "phase2": (salesPhaseController.salesData.value?.data.phase2 ?? 0)
+    //       .toDouble(),
+    //   "phase3": (salesPhaseController.salesData.value?.data.phase3 ?? 0)
+    //       .toDouble(),
+    //   "phase4": (salesPhaseController.salesData.value?.data.phase4 ?? 0)
+    //       .toDouble(),
+    // };
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final currentMonth = now.month;
+
+    // Filter and sort daily values with proper error handling
+    var filteredDailyValues = allDailyValues.where((dv) {
+      try {
+        final dateString = dv["date"] as String;
+        if (dateString.isEmpty) return false;
+        final dt = DateFormat(
+          'd/M',
+        ).parse(dateString); // Use specific format for parsing
+        return dt.year == currentYear && dt.month == currentMonth;
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+
+    final int itemsPerPage = 4;
+    final totalSetsLocal = (filteredDailyValues.length / itemsPerPage).ceil();
+
+    List<Map<String, dynamic>> currentData = [];
+    String dateRange = "";
+    if (filteredDailyValues.isNotEmpty) {
+      final startIndex = currentSet * itemsPerPage;
+      final endIndex = (startIndex + itemsPerPage < filteredDailyValues.length)
+          ? startIndex + itemsPerPage
+          : filteredDailyValues.length;
+
+      currentData = filteredDailyValues.sublist(startIndex, endIndex).map((dv) {
+        try {
+          final dateString = dv["date"] as String;
+          final dt = DateFormat(
+            'd/M',
+          ).parse(dateString); // Use specific format for parsing
+          final day = [
+            'Sun',
+            'Mon',
+            'Tue',
+            'Wed',
+            'Thu',
+            'Fri',
+            'Sat',
+          ][dt.weekday % 7];
+          final dateStr = "${dt.day}/${dt.month}";
+          final promise = (dv["promise"] as num).toDouble();
+          final actual = (dv["actual"] as num).toDouble();
+          final percent = promise > 0 ? ((actual / promise) * 100).round() : 0;
+          return {
+            "day": day,
+            "date": dateStr,
+            "promise": promise.toStringAsFixed(2),
+            "actual": actual.toStringAsFixed(2),
+            "percent": percent,
+          };
+        } catch (e) {
+          return {
+            "day": 'N/A',
+            "date": 'N/A',
+            "promise": '0.00',
+            "actual": '0.00',
+            "percent": 0,
+          };
+        }
+      }).toList();
+
+      if (currentData.isNotEmpty) {
+        dateRange =
+            "${currentData.first['date']} - ${currentData.last['date']}";
       }
     }
 
@@ -187,23 +317,30 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         userName: loginResponse?.data?.user.name ?? "Loading...",
         userId: userId,
         onNotificationPressed: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Notifications clicked!')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications clicked!')),
+          );
         },
       ),
 
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: SizeConfig.h(16)),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: SizeConfig.h(16),
+          ),
           child: Obx(() {
             if (!salesComparisonController.hasConnection.value) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.wifi_off, size: SizeConfig.w(60), color: Colors.grey[400]),
+                    Icon(
+                      Icons.wifi_off,
+                      size: SizeConfig.w(60),
+                      color: Colors.grey[400],
+                    ),
                     SizedBox(height: SizeConfig.h(20)),
                     Text(
                       "No Internet Connection",
@@ -217,7 +354,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                     Text(
                       "Please check your internet connection and try again.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(14),
+                        color: Colors.grey[500],
+                      ),
                     ),
                   ],
                 ),
@@ -234,13 +374,20 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
                     ],
                   ),
                   child: Obx(() {
                     return Text(
                       "Reporting To: ${reportingController.manager.value ?? "Loading..."}",
-                      style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(14),
+                        fontWeight: FontWeight.bold,
+                      ),
                     );
                   }),
                 ),
@@ -282,7 +429,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       );
                     }),
                     Obx(() {
-                      final incentiveValue = totalSalesController.myIncentive.value ?? 0.0;
+                      final incentiveValue =
+                          totalSalesController.myIncentive.value ?? 0.0;
                       return SizedBox(
                         width: SizeConfig.isDesktop
                             ? SizeConfig.w(340)
@@ -291,7 +439,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                             : double.infinity,
                         child: _infoCard(
                           "My Incentive (Today)",
-                          incentiveValue > 0 ? "₹${incentiveValue.toStringAsFixed(2)}" : "₹0",
+                          incentiveValue > 0
+                              ? "₹${incentiveValue.toStringAsFixed(2)}"
+                              : "₹0",
                           Icons.currency_rupee,
                           incentiveValue > 0 ? Colors.purple : Colors.grey,
                           1,
@@ -311,19 +461,26 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
                   if (categoryWiseSalesController.isLoading.value) {
                     return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const Padding(
                         padding: EdgeInsets.all(16),
                         child: Center(child: CircularProgressIndicator()),
                       ),
                     );
-                  } else if (categoryWiseSalesController.errorMessage.value != null) {
+                  } else if (categoryWiseSalesController.errorMessage.value !=
+                      null) {
                     return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Center(
-                          child: Text("Error: ${categoryWiseSalesController.errorMessage.value}"),
+                          child: Text(
+                            "Error: ${categoryWiseSalesController.errorMessage.value}",
+                          ),
                         ),
                       ),
                     );
@@ -331,10 +488,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       salesData.data?.categorySales == null ||
                       salesData.data!.categorySales!.isEmpty) {
                     return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const Padding(
                         padding: EdgeInsets.all(16),
-                        child: Center(child: Text("No category-wise sales data available.")),
+                        child: Center(
+                          child: Text("No category-wise sales data available."),
+                        ),
                       ),
                     );
                   }
@@ -344,13 +505,16 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   print(categories);
                   return Card(
                     color: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final screenWidth = constraints.maxWidth;
 
                         final bool isMobile = screenWidth < 600;
-                        final bool isTablet = screenWidth >= 600 && screenWidth < 1024;
+                        final bool isTablet =
+                            screenWidth >= 600 && screenWidth < 1024;
 
                         final double titleFontSize = isMobile
                             ? 16
@@ -373,7 +537,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                             children: [
                               /// Title Row
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -393,7 +558,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                     ],
                                   ),
                                   Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.grey[200],
                                       borderRadius: BorderRadius.circular(8),
@@ -415,7 +583,11 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                               /// Net Sales Qty
                               Row(
                                 children: [
-                                  Icon(Icons.folder, size: iconSize - 2, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.folder,
+                                    size: iconSize - 2,
+                                    color: Colors.grey[600],
+                                  ),
                                   SizedBox(width: 8),
                                   Text(
                                     "Total Net Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
@@ -436,9 +608,12 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                 itemCount: categories.length,
                                 itemBuilder: (context, index) {
                                   final category = categories[index];
-                                  final categoryTotalAmount = category.totalAmount ?? 0;
+                                  final categoryTotalAmount =
+                                      category.totalAmount ?? 0;
                                   final percentage = totalSalesAmount > 0
-                                      ? (categoryTotalAmount / totalSalesAmount) * 100
+                                      ? (categoryTotalAmount /
+                                                totalSalesAmount) *
+                                            100
                                       : 0.0;
 
                                   return Padding(
@@ -446,11 +621,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                     child: Column(
                                       children: [
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
                                               category.category as String,
-                                              style: TextStyle(fontSize: textFontSize),
+                                              style: TextStyle(
+                                                fontSize: textFontSize,
+                                              ),
                                             ),
                                             Text(
                                               "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
@@ -465,11 +643,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                         LinearProgressIndicator(
                                           value: percentage / 100,
                                           backgroundColor: Colors.grey[200],
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.green.shade700,
-                                          ),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.green.shade700,
+                                              ),
                                           minHeight: isMobile ? 6 : 8,
-                                          borderRadius: BorderRadius.circular(3),
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -482,7 +663,6 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       },
                     ),
                   );
-
                   // return Card(
                   //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   //   child: Padding(
@@ -598,22 +778,250 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 SizedBox(height: SizeConfig.h(16)),
                 highestSellingProduct(context),
                 SizedBox(height: SizeConfig.h(16)),
-                Card(
-                  color: Colors.white,
+                // Card(
+                //   color: Colors.white,
+                //   child: Column(
+                //     children: [
+                //       // SizedBox(height: SizeConfig.h(16)),
+                //       // SizedBox(height: 20),
+                //       // SalesLineChart(),
+                //       // SizedBox(height: SizeConfig.h(16)),
+                //       SalesVSPromiseInfoRow(),
+                //       SizedBox(height: SizeConfig.h(16)),
+                //     ],
+                //   ),
+                // ),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(SizeConfig.w(10)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // SizedBox(height: SizeConfig.h(16)),
-                      // SizedBox(height: 20),
-                      // SalesLineChart(),
-                      // SizedBox(height: SizeConfig.h(16)),
-                      SalesVSPromiseInfoRow(),
-                      SizedBox(height: SizeConfig.h(16)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Promise vs Actual",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: SizeConfig.w(14),
+                            ),
+                          ),
+                          if (filteredDailyValues.isNotEmpty)
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: currentSet > 0 ? goPrev : null,
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    size: 18,
+                                  ),
+                                ),
+                                Text(
+                                  dateRange,
+                                  style: TextStyle(fontSize: SizeConfig.w(10)),
+                                ),
+                                IconButton(
+                                  onPressed: currentSet < totalSetsLocal - 1
+                                      ? goNext
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: SizeConfig.h(4)),
+                      Obx(() {
+                        final list = promiseController.filteredData.toList();
+                        return SizedBox(
+                          width: double.infinity,
+                          // height: SizeConfig.h(200),
+                          height: 200,
+                          child: list.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    promiseController.isLoading.value
+                                        ? "Loading promise vs actual data..."
+                                        : "No promise vs actual data for this month.",
+                                    style: TextStyle(
+                                      fontSize: SizeConfig.w(16),
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                )
+                              : ScrollConfiguration(
+                                  behavior: ScrollConfiguration.of(
+                                    context,
+                                  ).copyWith(scrollbars: false),
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: SizeConfig.w(10),
+                                    ),
+                                    itemCount: list.length,
+                                    separatorBuilder: (_, __) =>
+                                        SizedBox(width: SizeConfig.w(10)),
+                                    itemBuilder: (context, index) {
+                                      final item = list[index];
+                                      final percent = item['percent'] as int;
+                                      final color = percent >= 100
+                                          ? Colors.green
+                                          : percent >= 80
+                                          ? Colors.orange
+                                          : Colors.red;
+
+                                      // Reverse index
+                                      final reverseIndex = list.length - index;
+
+                                      return Align(
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          width: SizeConfig.w(120),
+                                          padding: EdgeInsets.all(
+                                            SizeConfig.w(6),
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                              color: color,
+                                              width: 2,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              // Number + Date
+                                              Text(
+                                                "$reverseIndex ${item['date']}",
+                                                style: TextStyle(
+                                                  fontSize: SizeConfig.w(12),
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.blueGrey,
+                                                ),
+                                              ),
+                                              // Promise
+                                              Column(
+                                                children: [
+                                                  Text(
+                                                    "Promise",
+                                                    style: TextStyle(
+                                                      color: Colors.grey[700],
+                                                      fontSize: SizeConfig.w(
+                                                        11,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: SizeConfig.h(1.2),
+                                                  ),
+                                                  FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      item['promise'] as String,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: SizeConfig.w(
+                                                          14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              // Actual
+                                              Column(
+                                                children: [
+                                                  Text(
+                                                    "Actual",
+                                                    style: TextStyle(
+                                                      color: Colors.grey[700],
+                                                      fontSize: SizeConfig.w(
+                                                        11,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: SizeConfig.h(1.2),
+                                                  ),
+                                                  FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      item['actual'] as String,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: SizeConfig.w(
+                                                          14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              // Percent Indicator
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: SizeConfig.h(3.2),
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: color.withOpacity(
+                                                    0.15,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    "$percent%",
+                                                    style: TextStyle(
+                                                      color: color,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: SizeConfig.w(
+                                                        14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                        );
+                      }),
                     ],
                   ),
                 ),
                 SizedBox(height: SizeConfig.h(16)),
                 _buildSubordinatesSalesVsPromiseCard(),
-
+                SizedBox(height: SizeConfig.h(16)),
+                _buildArticleWithMrpAndStockCard()
               ],
             );
           }),
@@ -624,12 +1032,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
   //  Highest Selling Products
   Widget highestSellingProduct(BuildContext context) {
-    final TopArticlesController topArticlesController = Get.find<TopArticlesController>();
+    final TopArticlesController topArticlesController =
+        Get.find<TopArticlesController>();
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 600;
-        final bool isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 1024;
+        final bool isTablet =
+            constraints.maxWidth >= 600 && constraints.maxWidth < 1024;
 
         final double titleFontSize = isMobile
             ? SizeConfig.w(14)
@@ -697,12 +1107,18 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           Text(
                             "Highest Selling Products",
                             maxLines: 2,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: titleFontSize),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: titleFontSize,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             "(Last 7 Days)",
-                            style: TextStyle(fontSize: textFontSize, color: Colors.grey[700]),
+                            style: TextStyle(
+                              fontSize: textFontSize,
+                              color: Colors.grey[700],
+                            ),
                           ),
                         ],
                       ),
@@ -713,13 +1129,19 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           IconButton(
                             onPressed: () => showPrevious(topArticles.length),
                             icon: const Icon(Icons.arrow_back_ios),
-                            iconSize: isMobile ? SizeConfig.w(18) : SizeConfig.w(22),
-                            color: currentIndex > 0 ? Colors.black : Colors.grey,
+                            iconSize: isMobile
+                                ? SizeConfig.w(18)
+                                : SizeConfig.w(22),
+                            color: currentIndex > 0
+                                ? Colors.black
+                                : Colors.grey,
                           ),
                           IconButton(
                             onPressed: () => showNext(topArticles.length),
                             icon: const Icon(Icons.arrow_forward_ios),
-                            iconSize: isMobile ? SizeConfig.w(18) : SizeConfig.w(22),
+                            iconSize: isMobile
+                                ? SizeConfig.w(18)
+                                : SizeConfig.w(22),
                             color: currentIndex < topArticles.length - 1
                                 ? Colors.black
                                 : Colors.grey,
@@ -739,7 +1161,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                             topArticlesController.isLoading.value
                                 ? "Loading top articles..."
                                 : "No top articles data available",
-                            style: TextStyle(fontSize: textFontSize, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: textFontSize,
+                              color: Colors.grey,
+                            ),
                           ),
                         )
                       : PageView.builder(
@@ -775,7 +1200,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
   Widget _buildProductCard({
     required BuildContext context,
-    required ArticleData article,
+    required TopArticleData.ArticleData article,
     required bool isMobile,
     required double imageSize,
     required double paddingValue,
@@ -840,12 +1265,18 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   children: [
                     Text(
                       "Amount : ₹${article.netAmount.toStringAsFixed(2)}",
-                      style: TextStyle(fontSize: textFontSize, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: textFontSize,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "Qty: ${article.netQuantity}",
-                      style: TextStyle(fontSize: textFontSize, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: textFontSize,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
@@ -877,7 +1308,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
           // Trending Icon
           Padding(
-            padding: EdgeInsets.only(left: SizeConfig.w(8), top: SizeConfig.h(4)),
+            padding: EdgeInsets.only(
+              left: SizeConfig.w(8),
+              top: SizeConfig.h(4),
+            ),
             child: Icon(
               Icons.trending_up,
               color: _getTrendingColor(gpValue),
@@ -917,12 +1351,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
           return Center(
             child: CircularProgressIndicator(
               value: progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                  ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
                   : null,
             ),
           );
         },
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholderIcon(size: size),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderIcon(size: size),
       ),
     );
   }
@@ -938,7 +1374,13 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  Widget _infoCard(String title, String value, IconData icon, Color iconBgColor, double elevation) {
+  Widget _infoCard(
+    String title,
+    String value,
+    IconData icon,
+    Color iconBgColor,
+    double elevation,
+  ) {
     return Card(
       elevation: elevation,
       color: Colors.white,
@@ -946,7 +1388,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       margin: EdgeInsets.only(bottom: SizeConfig.h(4), right: 0),
       child: Container(
         constraints: BoxConstraints(minHeight: SizeConfig.h(120)),
-        padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(14), vertical: SizeConfig.h(8)),
+        padding: EdgeInsets.symmetric(
+          horizontal: SizeConfig.w(14),
+          vertical: SizeConfig.h(8),
+        ),
         child: Row(
           children: [
             Expanded(
@@ -956,7 +1401,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: SizeConfig.w(13)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: SizeConfig.w(13),
+                    ),
                   ),
                   SizedBox(height: SizeConfig.h(2.8)),
                   Text(
@@ -972,7 +1420,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             ),
             Container(
               padding: EdgeInsets.all(SizeConfig.w(12)),
-              decoration: BoxDecoration(color: iconBgColor, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, color: Colors.white, size: SizeConfig.w(19)),
             ),
           ],
@@ -995,11 +1446,18 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: SizeConfig.w(20), color: Colors.grey[700]),
+                    Icon(
+                      Icons.calendar_today,
+                      size: SizeConfig.w(20),
+                      color: Colors.grey[700],
+                    ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "Sales Comparison",
-                      style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(16),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1025,9 +1483,12 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             ),
             SizedBox(height: SizeConfig.h(20)),
             Obx(() {
-              final todaySales = (salesComparisonController.todaySalesData.value ?? 0).toDouble();
-              final yesterdaySales = (salesComparisonController.yesterdaySalesData.value ?? 0)
-                  .toDouble();
+              final todaySales =
+                  (salesComparisonController.todaySalesData.value ?? 0)
+                      .toDouble();
+              final yesterdaySales =
+                  (salesComparisonController.yesterdaySalesData.value ?? 0)
+                      .toDouble();
               final difference = todaySales - yesterdaySales;
               final percentageChange = yesterdaySales > 0
                   ? (difference / yesterdaySales) * 100
@@ -1082,7 +1543,11 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(trendIcon, color: trendColor, size: SizeConfig.w(20)),
+                      Icon(
+                        trendIcon,
+                        color: trendColor,
+                        size: SizeConfig.w(20),
+                      ),
                       SizedBox(width: SizeConfig.w(8)),
                       Text(
                         trendText,
@@ -1107,16 +1572,25 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     return Obx(() {
       if (subordinatesSalesVsPromiseController.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
-      } else if (subordinatesSalesVsPromiseController.errorMessage.value != null) {
+      } else if (subordinatesSalesVsPromiseController.errorMessage.value !=
+          null) {
         return Center(
-          child: Text("Error: ${subordinatesSalesVsPromiseController.errorMessage.value}"),
+          child: Text(
+            "Error: ${subordinatesSalesVsPromiseController.errorMessage.value}",
+          ),
         );
-      } else if (subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value?.data ==
+      } else if (subordinatesSalesVsPromiseController
+              .subordinatesSalesVsPromiseData
+              .value
+              ?.data ==
           null) {
         return const SizedBox.shrink(); // show nothing if no data
       }
 
-      final data = subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value!.data!;
+      final data = subordinatesSalesVsPromiseController
+          .subordinatesSalesVsPromiseData
+          .value!
+          .data!;
       final subordinates = data.subordinates;
 
       if (subordinates == null || subordinates.isEmpty) {
@@ -1135,7 +1609,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             children: [
               Text(
                 "Subordinates Sales vs Promise",
-                style: TextStyle(fontSize: SizeConfig.w(18), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: SizeConfig.w(18),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               SizedBox(height: SizeConfig.h(16)),
               ListView.builder(
@@ -1157,7 +1634,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   Widget _buildSubordinateTile(Subordinate subordinate) {
     final totalSales = subordinate.totalSales ?? 0;
     final totalPromise = subordinate.totalPromise ?? 0;
-    final percentage = totalPromise > 0 ? (totalSales / totalPromise) * 100 : 0.0;
+    final percentage = totalPromise > 0
+        ? (totalSales / totalPromise) * 100
+        : 0.0;
     Color progressColor = Colors.grey;
     if (percentage >= 80) {
       progressColor = Colors.green;
@@ -1178,12 +1657,18 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               children: [
                 Text(
                   subordinate.name ?? 'N/A',
-                  style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(16),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(4)),
                 Text(
                   "Email: ${subordinate.email ?? 'N/A'}",
-                  style: TextStyle(fontSize: SizeConfig.w(12), color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(12),
+                    color: Colors.grey[600],
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(8)),
                 Text(
@@ -1224,7 +1709,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               children: [
                 Text(
                   "Branches:",
-                  style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 ListView.builder(
                   shrinkWrap: true,
@@ -1246,7 +1734,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       branchProgressColor = Colors.red;
                     }
                     return Padding(
-                      padding: EdgeInsets.only(left: SizeConfig.w(16), top: SizeConfig.h(4)),
+                      padding: EdgeInsets.only(
+                        left: SizeConfig.w(16),
+                        top: SizeConfig.h(4),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1257,7 +1748,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           LinearProgressIndicator(
                             value: branchPercentage / 100,
                             backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(branchProgressColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              branchProgressColor,
+                            ),
                             minHeight: SizeConfig.h(6),
                             borderRadius: BorderRadius.circular(3),
                           ),
@@ -1284,208 +1777,189 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       ),
     );
   }
-}
 
-class SalesLineChart extends StatelessWidget {
-  const SalesLineChart({super.key});
+  Widget _buildArticleWithMrpAndStockCard() {
+    return Obx(() {
+      // Loading state
+      if (articleController.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 250,
-      child: LineChart(
-        LineChartData(
-          minY: 0,
-          maxY: 20,
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                getTitlesWidget: (value, meta) {
-                  switch (value.toInt()) {
-                    case 0:
-                      return const Text("Mon");
-                    case 1:
-                      return const Text("Tue");
-                    case 2:
-                      return const Text("Wed");
-                    case 3:
-                      return const Text("Thu");
-                    case 4:
-                      return const Text("Fri");
-                    case 5:
-                      return const Text("Sat");
-                    case 6:
-                      return const Text("Sun");
-                  }
-                  return const Text("");
-                },
+      // Error state
+      if (articleController.errorMessage.value.isNotEmpty) {
+        return Center(
+          child: Text("Error: ${articleController.errorMessage.value}"),
+        );
+      }
+
+      final articles = articleController.articles;
+      if (articles.isEmpty) {
+        return const Center(child: Text("No articles available."));
+      }
+
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
+            final bool isMobile = screenWidth < 600;
+            final bool isTablet = screenWidth >= 600 && screenWidth < 1024;
+            final double titleFontSize = isMobile
+                ? 16
+                : isTablet
+                ? 18
+                : 20;
+            final double smallTextSize = isMobile ? 12 : 14;
+            final double padding = isMobile ? 12 : 20;
+
+            return Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Articles with MRP and Stock",
+                    style: TextStyle(
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: SizeConfig.h(16)),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: screenWidth),
+                      child: DataTable(
+                        columnSpacing: SizeConfig.w(20),
+                        dataRowHeight: SizeConfig.h(60),
+                        headingRowHeight: SizeConfig.h(50),
+                        horizontalMargin: padding / 2,
+                        columns: [
+                          _buildTableHeader("Article ID", smallTextSize),
+                          _buildTableHeader("Product Name", smallTextSize),
+                          _buildTableHeader("Category", smallTextSize),
+                          _buildTableHeader("Price", smallTextSize),
+                          _buildTableHeader("Stock", smallTextSize),
+                          _buildTableHeader(
+                            "Sold Today Location",
+                            smallTextSize,
+                          ),
+                          _buildTableHeader("Status", smallTextSize),
+                          _buildTableHeader("Action", smallTextSize),
+                        ],
+                        rows: articles.map((article) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  article.articleNo ?? 'N/A',
+                                  style: TextStyle(fontSize: smallTextSize),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  article.productName ?? 'N/A',
+                                  style: TextStyle(fontSize: smallTextSize),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  article.category ?? 'N/A',
+                                  style: TextStyle(
+                                    fontSize: smallTextSize,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
+                                  style: TextStyle(fontSize: smallTextSize),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  "${article.stockQty ?? 0}",
+                                  style: TextStyle(fontSize: smallTextSize),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  article.soldTodayLocation ?? 'N/A',
+                                  style: TextStyle(fontSize: smallTextSize),
+                                ),
+                              ),
+                              DataCell(
+                                _buildStatusWidget(
+                                  article.stockQty ?? 0,
+                                  smallTextSize,
+                                ),
+                              ),
+                              DataCell(
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.shopping_cart,
+                                    size: smallTextSize * 1.5,
+                                  ),
+                                  onPressed: () {
+                                    // TODO: Implement cart action
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40, // 👈 extra padding so text doesn’t cut off
-                interval: 5,
-                getTitlesWidget: (value, meta) {
-                  return Text("₹${value.toInt()}L", style: const TextStyle(fontSize: 12));
-                },
-              ),
-            ),
-            // 👇 hide top & right titles to stop overlap
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          lineBarsData: [
-            // This Week (Green Line)
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 16.5),
-                FlSpot(1, 17.2),
-                FlSpot(2, 18.1),
-                FlSpot(3, 17.7),
-                FlSpot(4, 18.8),
-                FlSpot(5, 19.6),
-                FlSpot(6, 16.9),
-              ],
-              isCurved: true,
-              color: Colors.green,
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(show: true),
-            ),
-            // Last Week (Dashed Grey Line)
-            LineChartBarData(
-              spots: [
-                FlSpot(0, 14.5),
-                FlSpot(1, 15.1),
-                FlSpot(2, 16.0),
-                FlSpot(3, 16.6),
-                FlSpot(4, 17.1),
-                FlSpot(5, 18.2),
-                FlSpot(6, 16.0),
-              ],
-              isCurved: true,
-              color: Colors.grey,
-              barWidth: 2,
-              isStrokeCapRound: true,
-              dashArray: [6, 4],
-              dotData: FlDotData(show: true),
-            ),
-            // Target (Green Dotted Line)
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 16.0),
-                FlSpot(1, 16.0),
-                FlSpot(2, 16.0),
-                FlSpot(3, 16.0),
-                FlSpot(4, 16.0),
-                FlSpot(5, 16.0),
-                FlSpot(6, 16.0),
-              ],
-              isCurved: false,
-              color: Colors.green,
-              barWidth: 2,
-              dotData: FlDotData(show: false),
-              dashArray: [4, 4],
-            ),
-          ],
-          gridData: FlGridData(show: true),
-          borderData: FlBorderData(show: false),
+            );
+          },
         ),
+      );
+    });
+  }
+
+  // Helper for table headers
+  DataColumn _buildTableHeader(String text, double fontSize) {
+    return DataColumn(
+      label: Text(
+        text,
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
       ),
     );
   }
-}
 
-class SalesVSPromiseInfoRow extends StatelessWidget {
-  const SalesVSPromiseInfoRow({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final BranchManagerSalesVsPromiseController controller = Get.find();
-
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const CircularProgressIndicator();
-      } else if (controller.errorMessage.isNotEmpty) {
-        return Text('Error: ${controller.errorMessage.value}');
-      } else if (controller.salesVsPromiseData.value != null) {
-        final thisWeekSales = controller.salesVsPromiseData.value!.data.thisWeek.totals.totalSales;
-        final lastWeekSales = controller.salesVsPromiseData.value!.data.lastWeek.totals.totalSales;
-
-        // Calculate growth
-        double growth = 0.0;
-        Color growthColor = Colors.black87;
-        if (lastWeekSales != 0) {
-          growth = ((thisWeekSales - lastWeekSales) / lastWeekSales) * 100;
-          if (growth > 0) {
-            growthColor = Colors.green;
-          } else if (growth < 0) {
-            growthColor = Colors.red;
-          }
-        }
-
-        return Column(
-          children: [
-            SizedBox(height: SizeConfig.h(10)),
-            Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "📈 Sales Vs Promise",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                InfoCard(
-                  label: "Avg This Week",
-                  value: "₹${(thisWeekSales / 100000).toStringAsFixed(1)}L",
-                  color: Colors.green,
-                ),
-                InfoCard(
-                  label: "Avg Last Week",
-                  value: "₹${(lastWeekSales / 100000).toStringAsFixed(1)}L",
-                  color: Colors.black87,
-                ),
-                InfoCard(
-                  label: "Growth",
-                  value: "${growth.toStringAsFixed(1)}%",
-                  color: growthColor,
-                ),
-              ],
-            ),
-          ],
-        );
-      } else {
-        return const Text('No data available');
-      }
-    });
-  }
-}
-
-class InfoCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const InfoCard({super.key, required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
+  // Status widget
+  Widget _buildStatusWidget(int stockQty, double fontSize) {
+    final status = _getStatus(stockQty);
+    return Row(
       children: [
+        Icon(status['icon'], color: status['color'], size: fontSize * 1.2),
+        SizedBox(width: SizeConfig.w(4)),
         Text(
-          value,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+          status['text'],
+          style: TextStyle(color: status['color'], fontSize: fontSize),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
+  }
+
+  Map<String, dynamic> _getStatus(int qty) {
+    if (qty > 50)
+      return {
+        'color': Colors.green,
+        'text': 'In Stock',
+        'icon': Icons.check_circle,
+      };
+    if (qty > 10)
+      return {
+        'color': Colors.orange,
+        'text': 'Low Stock',
+        'icon': Icons.warning,
+      };
+    return {'color': Colors.red, 'text': 'Critical', 'icon': Icons.error};
   }
 }

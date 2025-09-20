@@ -124,7 +124,6 @@ class NavigationDrawerWidget extends StatelessWidget {
         ),
       ],
     );
-
     return isDesktop
         ? SizedBox(
             width: _kDrawerWidth,
@@ -132,7 +131,6 @@ class NavigationDrawerWidget extends StatelessWidget {
           )
         : Drawer(backgroundColor: AppStyle.backgroundColor, child: drawerContent);
   }
-
   /// 🔹 Navigation Tile
   Widget _buildNavTile(BuildContext context, MenuItem item, AppStyle appStyle) {
     return ListTile(
@@ -148,7 +146,6 @@ class NavigationDrawerWidget extends StatelessWidget {
           final box = Hive.box('myBox');
           final userGrade = box.get(AppConstants.userGrade);
           print("User Grade: $userGrade");
-
           switch (userGrade) {
             case "Grade 1":
               Get.offAll(() => const BusinessHeadDashboard());

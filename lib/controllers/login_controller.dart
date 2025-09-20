@@ -35,9 +35,7 @@ class LoginController extends GetxController {
 
     final loginResponseJson = box.get(AppConstants.loginResponse);
     if (loginResponseJson != null) {
-      loginResponse.value = LoginResponse.fromJson(
-        jsonDecode(loginResponseJson),
-      );
+      loginResponse.value = LoginResponse.fromJson(jsonDecode(loginResponseJson));
     }
 
     // if (token.value != null && token.value!.isNotEmpty) {
@@ -98,10 +96,7 @@ class LoginController extends GetxController {
 
     // Save the entire login response as JSON
     if (loginResponse.value != null) {
-      await box.put(
-        AppConstants.loginResponse,
-        jsonEncode(loginResponse.value!.toJson()),
-      );
+      await box.put(AppConstants.loginResponse, jsonEncode(loginResponse.value!.toJson()));
     }
   }
 
@@ -140,16 +135,14 @@ class LoginController extends GetxController {
         );
 
         loginResponse.value = loginModel;
-        errorMessage.value =
-            null; // Clear any previous error message on successful login
+        errorMessage.value = null; // Clear any previous error message on successful login
 
         // Navigate after success
         // Get.offAll(() => const RegionalManagerDashboard());
       }
     } catch (e) {
       String userMessage = "Login failed. Please try again.";
-      if (e is Exception &&
-          e.toString().contains("Login failed. Status code: 404")) {
+      if (e is Exception && e.toString().contains("Login failed. Status code: 404")) {
         try {
           final errorBody = e.toString().split("Body:").last.trim();
           final Map<String, dynamic> errorJson = jsonDecode(errorBody);
@@ -203,12 +196,8 @@ class LoginController extends GetxController {
   Future<void> updateLoginResponseUserData(User newUserData) async {
     if (loginResponse.value != null) {
       // Create an updated LoginData object with the new user data
-      final updatedLoginData = loginResponse.value!.data!.copyWith(
-        user: newUserData,
-      );
-      loginResponse.value = loginResponse.value!.copyWith(
-        data: updatedLoginData,
-      );
+      final updatedLoginData = loginResponse.value!.data!.copyWith(user: newUserData);
+      loginResponse.value = loginResponse.value!.copyWith(data: updatedLoginData);
 
       // Also update individual stored values that might be displayed directly
       final box = Hive.box('myBox');
@@ -217,10 +206,7 @@ class LoginController extends GetxController {
       // Update other fields as necessary if they are directly displayed elsewhere
 
       // Resave the entire login response JSON to ensure all fields are up-to-date
-      await box.put(
-        AppConstants.loginResponse,
-        jsonEncode(loginResponse.value!.toJson()),
-      );
+      await box.put(AppConstants.loginResponse, jsonEncode(loginResponse.value!.toJson()));
     }
   }
 }

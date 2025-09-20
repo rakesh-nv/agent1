@@ -76,6 +76,9 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
         reportingController.getReportingManager().catchError((e) {
           debugPrint("Reporting error: $e");
         }),
+        totalSalesController.fetchTodaysSales().catchError((e){
+          debugPrint("fetchTodaysSales error: $e");
+        }),
         salesComparisonController.fetchTodaysSales().catchError((e) {
           debugPrint("Today's Sales error: $e");
         }),
@@ -264,8 +267,9 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
       if (user == null) return const SizedBox.shrink();
       final userId = (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
           ? 'All Branches'
-          : (user.selectedBranchAliases.isNotEmpty == true ? user.selectedBranchAliases.first : '');
-
+          : (user.selectedBranchAliases.isNotEmpty
+          ? user.selectedBranchAliases.join(', ') // joins all branches as a string
+          : '');
       return Scaffold(
         backgroundColor: Colors.grey[100],
         drawer: NavigationDrawerWidget(),
@@ -808,31 +812,26 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
           border: Border.all(color: Colors.grey),
           borderRadius: BorderRadius.circular(15),
         ),
-        child: Card(
-          color: Colors.white,
-          margin: EdgeInsets.symmetric(vertical: SizeConfig.h(8)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: EdgeInsets.all(SizeConfig.w(16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Subordinates Sales vs Promise",
-                  style: TextStyle(fontSize: SizeConfig.w(18), fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: SizeConfig.h(16)),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: subordinates.length,
-                  itemBuilder: (context, index) {
-                    final subordinate = subordinates[index];
-                    return _buildSubordinateTile(subordinate);
-                  },
-                ),
-              ],
-            ),
+        child: Padding(
+          padding: EdgeInsets.all(SizeConfig.w(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Subordinates Sales vs Promise",
+                style: TextStyle(fontSize: SizeConfig.w(18), fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: SizeConfig.h(16)),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: subordinates.length,
+                itemBuilder: (context, index) {
+                  final subordinate = subordinates[index];
+                  return _buildSubordinateTile(subordinate);
+                },
+              ),
+            ],
           ),
         ),
       );

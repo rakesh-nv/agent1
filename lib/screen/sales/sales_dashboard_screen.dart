@@ -224,22 +224,23 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
           dateRange = "${currentData.first['date']} - ${currentData.last['date']}";
         }
       }
+
       final loginResponse = loginController.loginResponse.value;
       final user = loginResponse?.data?.user;
-      final userId =
-          ((user != null && (user.userType.toLowerCase() == 'head' || user.isAllBranches == true))
-              ? 'All Branches'
-              : (user != null && user.selectedBranchAliases.isNotEmpty == true
-                    ? user.selectedBranchAliases.first
-                    : '')) ??
-          '';
+      final userId = user == null
+          ? ''
+          : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
+          ? 'All Branches'
+          : (user.selectedBranchAliases.isNotEmpty
+                ? user.selectedBranchAliases.join(', ') // joins all branches as a string
+                : '');
 
       return Scaffold(
         backgroundColor: AppStyle.backgroundColor,
         drawer: NavigationDrawerWidget(),
         appBar: CustomAppBar(
           userName: userName,
-          userId: userId,
+          userId: userId.toString(),
           onNotificationPressed: () {
             ScaffoldMessenger.of(
               context,
@@ -353,7 +354,11 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
                               ],
                             ),
                             child: Column(
@@ -376,9 +381,14 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                                             onPressed: currentSet > 0 ? goPrev : null,
                                             icon: const Icon(Icons.arrow_back_ios_new, size: 18),
                                           ),
-                                          Text(dateRange, style: TextStyle(fontSize: SizeConfig.w(10))),
+                                          Text(
+                                            dateRange,
+                                            style: TextStyle(fontSize: SizeConfig.w(10)),
+                                          ),
                                           IconButton(
-                                            onPressed: currentSet < totalSetsLocal - 1 ? goNext : null,
+                                            onPressed: currentSet < totalSetsLocal - 1
+                                                ? goNext
+                                                : null,
                                             icon: const Icon(Icons.arrow_forward_ios, size: 18),
                                           ),
                                         ],
@@ -390,139 +400,141 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                                   final list = promiseController.filteredData.toList();
                                   return SizedBox(
                                     width: double.infinity,
-                                    height: SizeConfig.h(200),
+                                    // height: SizeConfig.h(200),
+                                    height: 200,
                                     child: list.isEmpty
                                         ? Center(
-                                      child: Text(
-                                        promiseController.isLoading.value
-                                            ? "Loading promise vs actual data..."
-                                            : "No promise vs actual data for this month.",
-                                        style: TextStyle(
-                                          fontSize: SizeConfig.w(16),
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    )
-                                        : ScrollConfiguration(
-                                      behavior: ScrollConfiguration.of(
-                                        context,
-                                      ).copyWith(scrollbars: false),
-                                      child: ListView.separated(
-                                        scrollDirection: Axis.horizontal,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: SizeConfig.w(10),
-                                        ),
-                                        itemCount: list.length,
-                                        separatorBuilder: (_, __) =>
-                                            SizedBox(width: SizeConfig.w(10)),
-                                        itemBuilder: (context, index) {
-                                          final item = list[index];
-                                          final percent = item['percent'] as int;
-                                          final color = percent >= 100
-                                              ? Colors.green
-                                              : percent >= 80
-                                              ? Colors.orange
-                                              : Colors.red;
-
-                                          // Reverse index
-                                          final reverseIndex = list.length - index;
-
-                                          return Align(
-                                            alignment: Alignment.center,
-                                            child: Container(
-                                              width: SizeConfig.w(120),
-                                              padding: EdgeInsets.all(SizeConfig.w(6)),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(color: color, width: 2),
-                                                borderRadius: BorderRadius.circular(14),
-                                              ),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  // Number + Date
-                                                  Text(
-                                                    "$reverseIndex ${item['date']}",
-                                                    style: TextStyle(
-                                                      fontSize: SizeConfig.w(12),
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.blueGrey,
-                                                    ),
-                                                  ),
-                                                  // Promise
-                                                  Column(
-                                                    children: [
-                                                      Text(
-                                                        "Promise",
-                                                        style: TextStyle(
-                                                          color: Colors.grey[700],
-                                                          fontSize: SizeConfig.w(11),
-                                                        ),
-                                                      ),
-                                                      SizedBox(height: SizeConfig.h(1.2)),
-                                                      FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        child: Text(
-                                                          item['promise'] as String,
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: SizeConfig.w(14),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  // Actual
-                                                  Column(
-                                                    children: [
-                                                      Text(
-                                                        "Actual",
-                                                        style: TextStyle(
-                                                          color: Colors.grey[700],
-                                                          fontSize: SizeConfig.w(11),
-                                                        ),
-                                                      ),
-                                                      SizedBox(height: SizeConfig.h(1.2)),
-                                                      FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        child: Text(
-                                                          item['actual'] as String,
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: SizeConfig.w(14),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  // Percent Indicator
-                                                  Container(
-                                                    padding: EdgeInsets.symmetric(
-                                                      vertical: SizeConfig.h(3.2),
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: color.withOpacity(0.15),
-                                                      borderRadius: BorderRadius.circular(14),
-                                                    ),
-                                                    child: Center(
-                                                      child: Text(
-                                                        "$percent%",
-                                                        style: TextStyle(
-                                                          color: color,
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: SizeConfig.w(14),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
+                                            child: Text(
+                                              promiseController.isLoading.value
+                                                  ? "Loading promise vs actual data..."
+                                                  : "No promise vs actual data for this month.",
+                                              style: TextStyle(
+                                                fontSize: SizeConfig.w(16),
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey,
                                               ),
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ),
+                                          )
+                                        : ScrollConfiguration(
+                                            behavior: ScrollConfiguration.of(
+                                              context,
+                                            ).copyWith(scrollbars: false),
+                                            child: ListView.separated(
+                                              scrollDirection: Axis.horizontal,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: SizeConfig.w(10),
+                                              ),
+                                              itemCount: list.length,
+                                              separatorBuilder: (_, __) =>
+                                                  SizedBox(width: SizeConfig.w(10)),
+                                              itemBuilder: (context, index) {
+                                                final item = list[index];
+                                                final percent = item['percent'] as int;
+                                                final color = percent >= 100
+                                                    ? Colors.green
+                                                    : percent >= 80
+                                                    ? Colors.orange
+                                                    : Colors.red;
+
+                                                // Reverse index
+                                                final reverseIndex = list.length - index;
+
+                                                return Align(
+                                                  alignment: Alignment.center,
+                                                  child: Container(
+                                                    width: SizeConfig.w(120),
+                                                    padding: EdgeInsets.all(SizeConfig.w(6)),
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(color: color, width: 2),
+                                                      borderRadius: BorderRadius.circular(14),
+                                                    ),
+                                                    child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.spaceEvenly,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      children: [
+                                                        // Number + Date
+                                                        Text(
+                                                          "$reverseIndex ${item['date']}",
+                                                          style: TextStyle(
+                                                            fontSize: SizeConfig.w(12),
+                                                            fontWeight: FontWeight.w500,
+                                                            color: Colors.blueGrey,
+                                                          ),
+                                                        ),
+                                                        // Promise
+                                                        Column(
+                                                          children: [
+                                                            Text(
+                                                              "Promise",
+                                                              style: TextStyle(
+                                                                color: Colors.grey[700],
+                                                                fontSize: SizeConfig.w(11),
+                                                              ),
+                                                            ),
+                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            FittedBox(
+                                                              fit: BoxFit.scaleDown,
+                                                              child: Text(
+                                                                item['promise'] as String,
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: SizeConfig.w(14),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        // Actual
+                                                        Column(
+                                                          children: [
+                                                            Text(
+                                                              "Actual",
+                                                              style: TextStyle(
+                                                                color: Colors.grey[700],
+                                                                fontSize: SizeConfig.w(11),
+                                                              ),
+                                                            ),
+                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            FittedBox(
+                                                              fit: BoxFit.scaleDown,
+                                                              child: Text(
+                                                                item['actual'] as String,
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: SizeConfig.w(14),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        // Percent Indicator
+                                                        Container(
+                                                          padding: EdgeInsets.symmetric(
+                                                            vertical: SizeConfig.h(3.2),
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: color.withOpacity(0.15),
+                                                            borderRadius: BorderRadius.circular(14),
+                                                          ),
+                                                          child: Center(
+                                                            child: Text(
+                                                              "$percent%",
+                                                              style: TextStyle(
+                                                                color: color,
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: SizeConfig.w(14),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
                                   );
                                 }),
                               ],
@@ -530,12 +542,11 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                           ),
                           SizedBox(height: SizeConfig.h(4)),
                           highestSellingProduct(context),
-                          SizedBox(height: SizeConfig.h(2)),
+                          // SizedBox(height: SizeConfig.h(2)),
                           PhaseTwoInfoWidget(),
                           SizedBox(height: SizeConfig.h(10)),
                           _buildSubordinatesSalesVsPromiseCard(),
                           SizedBox(height: SizeConfig.h(30)),
-
                         ],
                       ),
                     ),
@@ -596,7 +607,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
   Widget highestSellingProduct(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
-    final double titleFontSize = isMobile ? SizeConfig.w(14) : SizeConfig.w(20);
+    final double titleFontSize = isMobile ? SizeConfig.w(12) : SizeConfig.w(20);
     final double textFontSize = isMobile ? SizeConfig.w(12) : SizeConfig.w(16);
     final double imageSize = isMobile ? SizeConfig.w(100) : SizeConfig.w(120);
     final double paddingValue = isMobile ? SizeConfig.w(10) : SizeConfig.w(20);
@@ -764,7 +775,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                SizedBox(height: isMobile ? SizeConfig.h(6) : SizeConfig.h(8)),
+                SizedBox(height: isMobile ? SizeConfig.h(3) : SizeConfig.h(5)),
 
                 // Price and Quantity Row
                 Column(
@@ -1097,7 +1108,7 @@ class PhaseTwoInfoWidget extends StatelessWidget {
 
       final isMobile = SizeConfig.isMobile;
       final padding = isMobile ? SizeConfig.w(12) : SizeConfig.w(20);
-      final fontSize = isMobile ? SizeConfig.w(14) : SizeConfig.w(18);
+      final fontSize = isMobile ? SizeConfig.w(13) : SizeConfig.w(18);
       final amountFontSize = isMobile ? SizeConfig.w(16) : SizeConfig.w(20);
       final gap = isMobile ? SizeConfig.w(12) : SizeConfig.w(20);
 
@@ -1105,9 +1116,10 @@ class PhaseTwoInfoWidget extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          // color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
+          // border: Border.all(color: Colors.grey.shade300),
+          // border: Border.all(color: Colors.grey.shade300),
         ),
         child: IntrinsicHeight(
           child: Row(

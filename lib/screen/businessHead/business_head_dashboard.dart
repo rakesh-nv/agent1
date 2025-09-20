@@ -247,11 +247,12 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
       final currentUser = loginController.loginResponse.value?.data!.user;
       final loginResponse = loginController.loginResponse.value;
       final user = loginResponse?.data?.user;
-      final userId =
-          (user != null && (user.userType.toLowerCase() == 'head' || user.isAllBranches == true))
+      final userId = user == null
+          ? ''
+          : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
           ? 'All Branches'
-          : ((user != null && user.selectedBranchAliases.isNotEmpty == true)
-                ? user.selectedBranchAliases.first
+          : (user.selectedBranchAliases.isNotEmpty
+                ? user.selectedBranchAliases.join(', ') // joins all branches as a string
                 : '');
 
       return Scaffold(
@@ -336,6 +337,19 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                 : double.infinity,
                             child: _infoCard(
                               "Total Sales Amount (Today)",
+                              "₹${totalSalesController.salesData.value?.totalNetAmount ?? "0.0"}",
+                              Icons.currency_rupee,
+                              Colors.green,
+                            ),
+                          ),
+                          SizedBox(
+                            width: SizeConfig.isDesktop
+                                ? SizeConfig.w(340)
+                                : SizeConfig.isTablet
+                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
+                                : double.infinity,
+                            child: _infoCard(
+                              "Total Purchase (Today)",
                               "₹${totalSalesController.salesData.value?.totalNetAmount ?? "0.0"}",
                               Icons.currency_rupee,
                               Colors.green,
@@ -540,8 +554,7 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                       SizedBox(height: SizeConfig.h(16)),
                       // Promise vs Actual Section
                       // _buildPromiseVsActual(), // Uncommenting this
-                      SizedBox(height: SizeConfig.h(16)),
-
+                      // SizedBox(height: SizeConfig.h(16)),
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(SizeConfig.w(10)),
@@ -586,7 +599,7 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                               final list = promiseController.filteredData.toList();
                               return Container(
                                 width: double.infinity,
-                                height: SizeConfig.h(224),
+                                height: SizeConfig.h(200),
                                 child: list.isEmpty
                                     ? Center(
                                         child: Text(
@@ -594,130 +607,141 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                               ? "Loading promise vs actual data..."
                                               : "No promise vs actual data for this month.",
                                           style: TextStyle(
-                                            fontSize: SizeConfig.w(16),
+                                            fontSize: SizeConfig.w(14),
                                             fontWeight: FontWeight.bold,
                                             color: Colors.grey,
                                           ),
                                         ),
                                       )
-                                    : ScrollConfiguration(
-                                        behavior: ScrollConfiguration.of(
-                                          context,
-                                        ).copyWith(scrollbars: false),
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: SizeConfig.w(10),
-                                          ),
-                                          itemCount: list.length,
-                                          separatorBuilder: (_, __) =>
-                                              SizedBox(width: SizeConfig.w(10)),
-                                          itemBuilder: (context, index) {
-                                            final item = list[index];
-                                            final percent = item['percent'] as int;
-                                            final color = percent >= 100
-                                                ? Colors.green
-                                                : percent >= 80
-                                                ? Colors.orange
-                                                : Colors.red;
+                                    : LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          // Responsive card width based on available screen width
+                                          final cardWidth =
+                                              constraints.maxWidth * 0.35; // 35% of screen
+                                          final adjustedWidth = cardWidth < 120 ? 120 : cardWidth;
 
-                                            // Reverse index
-                                            final reverseIndex = list.length - index;
-
-                                            return Align(
-                                              alignment: Alignment.center,
-                                              child: Container(
-                                                width: SizeConfig.w(150),
-                                                padding: EdgeInsets.all(SizeConfig.w(6)),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(color: color, width: 2),
-                                                  borderRadius: BorderRadius.circular(14),
-                                                ),
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                    // Number + Date
-                                                    Text(
-                                                      "$reverseIndex. ${item['date']}",
-                                                      style: TextStyle(
-                                                        fontSize: SizeConfig.w(12),
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Colors.blueGrey,
-                                                      ),
-                                                    ),
-                                                    // Promise
-                                                    Column(
-                                                      children: [
-                                                        Text(
-                                                          "Promise",
-                                                          style: TextStyle(
-                                                            color: Colors.grey[700],
-                                                            fontSize: SizeConfig.w(11),
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: SizeConfig.h(1.2)),
-                                                        FittedBox(
-                                                          fit: BoxFit.scaleDown,
-                                                          child: Text(
-                                                            item['promise'] as String,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: SizeConfig.w(14),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    // Actual
-                                                    Column(
-                                                      children: [
-                                                        Text(
-                                                          "Actual",
-                                                          style: TextStyle(
-                                                            color: Colors.grey[700],
-                                                            fontSize: SizeConfig.w(11),
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: SizeConfig.h(1.2)),
-                                                        FittedBox(
-                                                          fit: BoxFit.scaleDown,
-                                                          child: Text(
-                                                            item['actual'] as String,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: SizeConfig.w(14),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    // Percent Indicator
-                                                    Container(
-                                                      padding: EdgeInsets.symmetric(
-                                                        vertical: SizeConfig.h(3.2),
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: color.withOpacity(0.15),
-                                                        borderRadius: BorderRadius.circular(14),
-                                                      ),
-                                                      child: Center(
-                                                        child: Text(
-                                                          "$percent%",
-                                                          style: TextStyle(
-                                                            color: color,
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: SizeConfig.w(14),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                          return ScrollConfiguration(
+                                            behavior: ScrollConfiguration.of(
+                                              context,
+                                            ).copyWith(scrollbars: false),
+                                            child: ListView.separated(
+                                              scrollDirection: Axis.horizontal,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: SizeConfig.w(10),
                                               ),
-                                            );
-                                          },
-                                        ),
+                                              itemCount: list.length,
+                                              separatorBuilder: (_, __) =>
+                                                  SizedBox(width: SizeConfig.w(10)),
+                                              itemBuilder: (context, index) {
+                                                final item = list[index];
+                                                final percent = item['percent'] as int;
+                                                final color = percent >= 100
+                                                    ? Colors.green
+                                                    : percent >= 80
+                                                    ? Colors.orange
+                                                    : Colors.red;
+
+                                                final reverseIndex = list.length - index;
+
+                                                return Align(
+                                                  alignment: Alignment.center,
+                                                  child: Container(
+                                                    width: SizeConfig.w(120), // ✅ responsive width
+                                                    padding: EdgeInsets.all(SizeConfig.w(6)),
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(color: color, width: 2),
+                                                      borderRadius: BorderRadius.circular(14),
+                                                    ),
+                                                    child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.spaceEvenly,
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                      children: [
+                                                        // Number + Date
+                                                        Text(
+                                                          "$reverseIndex ${item['date']}",
+                                                          style: TextStyle(
+                                                            fontSize: SizeConfig.w(
+                                                              11,
+                                                            ), // ✅ smaller text
+                                                            fontWeight: FontWeight.w500,
+                                                            color: Colors.blueGrey,
+                                                          ),
+                                                        ),
+                                                        // Promise
+                                                        Column(
+                                                          children: [
+                                                            Text(
+                                                              "Promise",
+                                                              style: TextStyle(
+                                                                color: Colors.grey[700],
+                                                                fontSize: SizeConfig.w(10),
+                                                              ),
+                                                            ),
+                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            FittedBox(
+                                                              fit: BoxFit.scaleDown,
+                                                              child: Text(
+                                                                item['promise'] as String,
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: SizeConfig.w(13),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        // Actual
+                                                        Column(
+                                                          children: [
+                                                            Text(
+                                                              "Actual",
+                                                              style: TextStyle(
+                                                                color: Colors.grey[700],
+                                                                fontSize: SizeConfig.w(10),
+                                                              ),
+                                                            ),
+                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            FittedBox(
+                                                              fit: BoxFit.scaleDown,
+                                                              child: Text(
+                                                                item['actual'] as String,
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: SizeConfig.w(13),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        // Percent Indicator
+                                                        Container(
+                                                          padding: EdgeInsets.symmetric(
+                                                            vertical: SizeConfig.h(3.2),
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: color.withOpacity(0.15),
+                                                            borderRadius: BorderRadius.circular(14),
+                                                          ),
+                                                          child: Center(
+                                                            child: Text(
+                                                              "$percent%",
+                                                              style: TextStyle(
+                                                                color: color,
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: SizeConfig.w(13),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        },
                                       ),
                               );
                             }),
@@ -1330,7 +1354,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             SizedBox(height: SizeConfig.h(20)),
             Obx(() {
               final todaySales = (salesComparisonController.todaySalesData.value ?? 0).toDouble();
-              final yesterdaySales = (salesComparisonController.yesterdaySalesData.value ?? 0).toDouble();
+              final yesterdaySales = (salesComparisonController.yesterdaySalesData.value ?? 0)
+                  .toDouble();
               final difference = todaySales - yesterdaySales;
               final percentageChange = yesterdaySales > 0
                   ? (difference / yesterdaySales) * 100
@@ -1769,14 +1794,14 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
         );
       } else if (subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value?.data ==
           null) {
-        return const Center(child: Text("No data available"));
+        return const SizedBox.shrink(); // show nothing if no data
       }
 
       final data = subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value!.data!;
       final subordinates = data.subordinates;
 
-      if (subordinates!.isEmpty) {
-        return Card(child: const Center(child: Text("No subordinates data available.")));
+      if (subordinates == null || subordinates.isEmpty) {
+        return const SizedBox.shrink(); // 🔹 don't show anything
       }
 
       return Container(

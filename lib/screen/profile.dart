@@ -510,10 +510,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
       final user = loginResponse.data?.user;
 
-      final userId = (user?.userType.toLowerCase() == 'head' || user?.isAllBranches == true)
+      final userId = user == null
+          ? ''
+          : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
           ? 'All Branches'
-          : (user?.selectedBranchAliases.isNotEmpty == true
-                ? user!.selectedBranchAliases.first
+          : (user.selectedBranchAliases.isNotEmpty
+                ? user.selectedBranchAliases.join(', ') // joins all branches as a string
                 : '');
       return Scaffold(
         drawer: NavigationDrawerWidget(),

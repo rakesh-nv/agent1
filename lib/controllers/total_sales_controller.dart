@@ -21,11 +21,9 @@ class TotalSalesController extends GetxController {
   var netProfit = Rx<double?>(null);
   var incentiveError = Rx<String?>(null);
 
-  TotalSalesController({
-    SalesApiService? apiService,
-    Connectivity? connectivity,
-  }) : _apiService = apiService ?? SalesApiService(),
-       _connectivity = connectivity ?? Connectivity() {
+  TotalSalesController({SalesApiService? apiService, Connectivity? connectivity})
+    : _apiService = apiService ?? SalesApiService(),
+      _connectivity = connectivity ?? Connectivity() {
     _initConnectivity();
   }
 
@@ -65,7 +63,7 @@ class TotalSalesController extends GetxController {
       hasConnection.value = newStatus;
       // Automatically retry fetch when connection is restored
       if (hasConnection.value && errorMessage.value != null) {
-        fetchTodaysSales();
+        // fetchTodaysSales();
       }
     }
   }
@@ -81,14 +79,12 @@ class TotalSalesController extends GetxController {
 
     try {
       debugPrint('Fetching today\'s sales data...');
-
       final response = await _apiService.fetchTodaysSales().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
           throw TimeoutException('Request timed out after 15 seconds');
         },
       );
-
 
       salesData.value = response.data;
       debugPrint('Successfully fetched today\'s sales data');

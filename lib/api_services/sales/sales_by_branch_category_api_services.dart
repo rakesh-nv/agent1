@@ -16,8 +16,7 @@ class ApiService {
     try {
       // Get the token from Hive
       final box = Hive.box('myBox');
-      final token =
-          box.get(AppConstants.keyToken) ?? ''; // Use AppConstants.keyToken
+      final token = box.get(AppConstants.keyToken) ?? ''; // Use AppConstants.keyToken
       final branch = box.get(AppConstants.branch);
       // print("f//////" + token);
       // if (token.isEmpty) {
@@ -38,9 +37,7 @@ class ApiService {
         },
         body: requestBody,
       );
-      debugPrint(
-        '---------------categoryWiseSales ---------------: ${response.body}',
-      );
+      debugPrint('---------------categoryWiseSales ---------------: ${response.body}');
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         return categoryWiseSalesModal.fromJson(jsonData);
