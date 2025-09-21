@@ -1021,7 +1021,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 SizedBox(height: SizeConfig.h(16)),
                 _buildSubordinatesSalesVsPromiseCard(),
                 SizedBox(height: SizeConfig.h(16)),
-                _buildArticleWithMrpAndStockCard()
+                _buildArticleWithMrpAndStockCard(),
               ],
             );
           }),
@@ -1792,7 +1792,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         );
       }
 
-      final articles = articleController.articles;
+      final articles = articleController.articles.take(5).toList();
       if (articles.isEmpty) {
         return const Center(child: Text("No articles available."));
       }
@@ -1836,17 +1836,13 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                         headingRowHeight: SizeConfig.h(50),
                         horizontalMargin: padding / 2,
                         columns: [
+                          // ArticleNo
                           _buildTableHeader("Article ID", smallTextSize),
-                          _buildTableHeader("Product Name", smallTextSize),
+
                           _buildTableHeader("Category", smallTextSize),
                           _buildTableHeader("Price", smallTextSize),
                           _buildTableHeader("Stock", smallTextSize),
-                          _buildTableHeader(
-                            "Sold Today Location",
-                            smallTextSize,
-                          ),
-                          _buildTableHeader("Status", smallTextSize),
-                          _buildTableHeader("Action", smallTextSize),
+
                         ],
                         rows: articles.map((article) {
                           return DataRow(
@@ -1857,12 +1853,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                   style: TextStyle(fontSize: smallTextSize),
                                 ),
                               ),
-                              DataCell(
-                                Text(
-                                  article.productName ?? 'N/A',
-                                  style: TextStyle(fontSize: smallTextSize),
-                                ),
-                              ),
+
                               DataCell(
                                 Text(
                                   article.category ?? 'N/A',
@@ -1884,29 +1875,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                   style: TextStyle(fontSize: smallTextSize),
                                 ),
                               ),
-                              DataCell(
-                                Text(
-                                  article.soldTodayLocation ?? 'N/A',
-                                  style: TextStyle(fontSize: smallTextSize),
-                                ),
-                              ),
-                              DataCell(
-                                _buildStatusWidget(
-                                  article.stockQty ?? 0,
-                                  smallTextSize,
-                                ),
-                              ),
-                              DataCell(
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.shopping_cart,
-                                    size: smallTextSize * 1.5,
-                                  ),
-                                  onPressed: () {
-                                    // TODO: Implement cart action
-                                  },
-                                ),
-                              ),
+
+
                             ],
                           );
                         }).toList(),
@@ -1948,18 +1918,20 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   }
 
   Map<String, dynamic> _getStatus(int qty) {
-    if (qty > 50)
+    if (qty > 50) {
       return {
         'color': Colors.green,
         'text': 'In Stock',
         'icon': Icons.check_circle,
       };
-    if (qty > 10)
+    }
+    if (qty > 10) {
       return {
         'color': Colors.orange,
         'text': 'Low Stock',
         'icon': Icons.warning,
       };
+    }
     return {'color': Colors.red, 'text': 'Critical', 'icon': Icons.error};
   }
 }
