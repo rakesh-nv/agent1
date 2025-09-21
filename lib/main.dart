@@ -40,7 +40,12 @@ void main() async {
   // Dependency Injection
   Get.put(LoginController());
   Get.put(ReportingManagerController());
-  Get.put(TotalSalesController(apiService: SalesApiService(), connectivity: Connectivity()));
+  Get.put(
+    TotalSalesController(
+      apiService: SalesApiService(),
+      connectivity: Connectivity(),
+    ),
+  );
   Get.put(BranchManagerSalesVsPromiseController());
   Get.put(SalesByPhaseController());
   Get.put(PromiseActualController());
@@ -64,7 +69,8 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'MB INDIA MIS',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+
+      themeMode: ThemeMode.system,
       home: const LauncherScreen(),
       // home: LoginScreen(),
     );

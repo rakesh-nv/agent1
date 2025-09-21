@@ -19,7 +19,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
@@ -31,17 +32,23 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late final AnimationController _fadeController;
   late final List<Animation<double>> _fieldFadeAnimations;
 
-  bool _isUpdating = false;
-  String? _selectedBranchId;
+  // bool _isUpdating = false;
+  // String? _selectedBranchId;
 
   final LoginController loginController = Get.find<LoginController>();
   final ReportingManagerController reportingManagerController =
       Get.find<ReportingManagerController>();
-  final SalesComparisonController salesComparisonController = Get.find<SalesComparisonController>();
-  final TotalSalesController totalSalesController = Get.find<TotalSalesController>();
+  final SalesComparisonController salesComparisonController =
+      Get.find<SalesComparisonController>();
+  final TotalSalesController totalSalesController =
+      Get.find<TotalSalesController>();
   final profileController = Get.find<ProfileController>();
 
-  final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '₹',
+    decimalDigits: 0,
+  );
 
   @override
   void initState() {
@@ -55,12 +62,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(parent: _bottomSheetController, curve: Curves.easeOutCubic));
+    _slideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _bottomSheetController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fieldFadeAnimations = List.generate(
       6, //
       (index) => Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -99,7 +111,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     final loginResponse = loginController.loginResponse.value;
     if (loginResponse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No user data available. Please try again later.')),
+        const SnackBar(
+          content: Text('No user data available. Please try again later.'),
+        ),
       );
       return;
     }
@@ -129,7 +143,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               animation: _slideAnimation,
               builder: (context, child) {
                 return Transform.translate(
-                  offset: Offset(0, AppStyle.screenHeight * _slideAnimation.value),
+                  offset: Offset(
+                    0,
+                    AppStyle.screenHeight * _slideAnimation.value,
+                  ),
                   child: child,
                 );
               },
@@ -139,11 +156,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   minHeight: AppStyle.screenHeight * 0.4,
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(AppStyle.w(6))),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(AppStyle.w(6)),
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.white.withOpacity(0.75), Colors.white.withOpacity(0.6)],
+                        colors: [
+                          Colors.white.withOpacity(0.75),
+                          Colors.white.withOpacity(0.6),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -154,7 +176,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           offset: const Offset(0, -4),
                         ),
                       ],
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.2),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.2,
+                      ),
                     ),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -163,7 +188,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           AppStyle.w(5),
                           AppStyle.h(3),
                           AppStyle.w(5),
-                          MediaQuery.of(context).viewInsets.bottom + AppStyle.h(3),
+                          MediaQuery.of(context).viewInsets.bottom +
+                              AppStyle.h(3),
                         ),
                         child: Form(
                           key: _formKey,
@@ -199,14 +225,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                     ),
                                   ),
                                   SizedBox(height: AppStyle.h(2)),
-                                  Divider(thickness: 1, color: Colors.grey.withOpacity(0.3)),
+                                  Divider(
+                                    thickness: 1,
+                                    color: Colors.grey.withOpacity(0.3),
+                                  ),
                                   _buildAnimatedField(
                                     index: 1,
                                     controller: _nameController,
                                     label: 'Name',
                                     icon: Icons.person,
-                                    validator: (v) =>
-                                        v!.trim().isEmpty ? 'Please enter your name' : null,
+                                    validator: (v) => v!.trim().isEmpty
+                                        ? 'Please enter your name'
+                                        : null,
                                   ),
                                   _buildAnimatedField(
                                     index: 2,
@@ -215,7 +245,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                     icon: Icons.email,
                                     inputType: TextInputType.emailAddress,
                                     validator: (v) {
-                                      if (v!.trim().isEmpty) return 'Please enter your email';
+                                      if (v!.trim().isEmpty)
+                                        return 'Please enter your email';
                                       if (!RegExp(
                                         r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                                       ).hasMatch(v)) {
@@ -231,8 +262,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                     icon: Icons.phone,
                                     inputType: TextInputType.phone,
                                     validator: (v) {
-                                      if (v!.trim().isEmpty) return 'Please enter your phone';
-                                      if (!RegExp(r'^[\+?\d\s-]{10,15}$').hasMatch(v)) {
+                                      if (v!.trim().isEmpty)
+                                        return 'Please enter your phone';
+                                      if (!RegExp(
+                                        r'^[\+?\d\s-]{10,15}$',
+                                      ).hasMatch(v)) {
                                         return 'Enter a valid number';
                                       }
                                       return null;
@@ -298,26 +332,38 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                     children: [
                                       Expanded(
                                         child: ElevatedButton(
-                                          onPressed: profileController.isLoading.value
+                                          onPressed:
+                                              profileController.isLoading.value
                                               ? null
                                               : () {
-                                                  if (_formKey.currentState != null) {
-                                                    _formKey.currentState!.reset();
+                                                  if (_formKey.currentState !=
+                                                      null) {
+                                                    _formKey.currentState!
+                                                        .reset();
                                                   }
-                                                  _nameController.text = user.name;
-                                                  _emailController.text = user.email;
-                                                  _phoneController.text = user.mobile;
-                                                  _locationController.text = user.id;
-                                                  _selectedBranchId = user.id;
-                                                  _bottomSheetController.reverse();
+                                                  _nameController.text =
+                                                      user.name;
+                                                  _emailController.text =
+                                                      user.email;
+                                                  _phoneController.text =
+                                                      user.mobile;
+                                                  _locationController.text =
+                                                      user.id;
+                                                  // _selectedBranchId = user.id;
+                                                  _bottomSheetController
+                                                      .reverse();
                                                   Navigator.pop(context);
                                                 },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.grey.shade200,
+                                            backgroundColor:
+                                                Colors.grey.shade200,
                                             foregroundColor: Colors.black87,
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                           ),
                                           child: const Text('Cancel'),
@@ -327,10 +373,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                       Expanded(
                                         child: Obx(
                                           () => ElevatedButton(
-                                            onPressed: profileController.isLoading.value
+                                            onPressed:
+                                                profileController
+                                                    .isLoading
+                                                    .value
                                                 ? null
                                                 : () async {
-                                                    if (_formKey.currentState!.validate()) {
+                                                    if (_formKey.currentState!
+                                                        .validate()) {
                                                       // if (user.userType != 'head' && _selectedBranchId == null) {
                                                       //   ScaffoldMessenger.of(context).showSnackBar(
                                                       //     const SnackBar(
@@ -340,26 +390,45 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                                       //   return;
                                                       // }
 
-                                                      await profileController.updateProfile(
-                                                        id: user.id,
-                                                        name: _nameController.text.trim(),
-                                                        email: _emailController.text.trim(),
-                                                        mobile: _phoneController.text.trim(),
-                                                      );
+                                                      await profileController
+                                                          .updateProfile(
+                                                            id: user.id,
+                                                            name:
+                                                                _nameController
+                                                                    .text
+                                                                    .trim(),
+                                                            email:
+                                                                _emailController
+                                                                    .text
+                                                                    .trim(),
+                                                            mobile:
+                                                                _phoneController
+                                                                    .text
+                                                                    .trim(),
+                                                          );
 
-                                                      if (profileController.errorMessage.value !=
+                                                      if (profileController
+                                                              .errorMessage
+                                                              .value !=
                                                           null) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
                                                           SnackBar(
                                                             content: Text(
-                                                              profileController.errorMessage.value!,
+                                                              profileController
+                                                                  .errorMessage
+                                                                  .value!,
                                                             ),
                                                           ),
                                                         );
                                                       } else {
-                                                        _bottomSheetController.reverse();
+                                                        _bottomSheetController
+                                                            .reverse();
                                                         Navigator.pop(context);
-                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
                                                           const SnackBar(
                                                             content: Text(
                                                               'Profile updated successfully!',
@@ -370,13 +439,20 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                                     }
                                                   },
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: profileController.isLoading.value
+                                              backgroundColor:
+                                                  profileController
+                                                      .isLoading
+                                                      .value
                                                   ? Colors.grey
                                                   : AppStyle.appBarColor,
                                               foregroundColor: Colors.white,
-                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 14,
+                                                  ),
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                             ),
                                             child: Text(
@@ -451,7 +527,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppStyle.textColor, size: AppStyle.w(5.5).clamp(20.0, 28.0)),
+          Icon(
+            icon,
+            color: AppStyle.textColor,
+            size: AppStyle.w(5.5).clamp(20.0, 28.0),
+          ),
           SizedBox(width: AppStyle.w(3).clamp(8.0, 16.0)),
           Expanded(
             child: Column(
@@ -465,7 +545,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
                 Text(
                   value,
-                  style: AppStyle.normalTextStyle().copyWith(fontWeight: FontWeight.w600),
+                  style: AppStyle.normalTextStyle().copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
@@ -486,13 +568,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       if (loginResponse == null) {
         return const Center(child: CircularProgressIndicator());
       }
-      final currentUser = loginResponse.data?.user;
+      // final currentUser = loginResponse.data?.user;
 
       final bool isTabletOrDesktop = AppStyle.isTablet || AppStyle.isDesktop;
-      final maxContentWidth = (AppStyle.screenWidth * (isTabletOrDesktop ? 0.8 : 1.0)).clamp(
-        300.0,
-        900.0,
-      );
+      final maxContentWidth =
+          (AppStyle.screenWidth * (isTabletOrDesktop ? 0.8 : 1.0)).clamp(
+            300.0,
+            900.0,
+          );
       final horizontalPadding = _getHorizontalPadding();
 
       // final String displayUserId = currentUser?.userType == 'head'
@@ -506,16 +589,20 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       //     ? currentUser.selectedBranchAliases.first
       //     : '');
 
-      final userName = loginController.loginResponse.value?.data!.user.name ?? "Loading...";
+      final userName =
+          loginController.loginResponse.value?.data!.user.name ?? "Loading...";
 
       final user = loginResponse.data?.user;
 
       final userId = user == null
           ? ''
-          : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
+          : (user.userType.toLowerCase() == 'head' ||
+                user.isAllBranches == true)
           ? 'All Branches'
           : (user.selectedBranchAliases.isNotEmpty
-                ? user.selectedBranchAliases.join(', ') // joins all branches as a string
+                ? user.selectedBranchAliases.join(
+                    ', ',
+                  ) // joins all branches as a string
                 : '');
       return Scaffold(
         drawer: NavigationDrawerWidget(),
@@ -523,9 +610,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           userName: userName,
           userId: userId,
           onNotificationPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Notifications clicked!')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notifications clicked!')),
+            );
           },
         ),
         backgroundColor: AppStyle.backgroundColor,
@@ -562,16 +649,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     final loginResponse = loginController.loginResponse.value;
     if (loginResponse == null) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildProfileHeader(context),
-        SizedBox(height: AppStyle.h(4).clamp(16.0, 32.0)),
-        _buildPersonalInfo(context),
-        SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-        _buildWorkInfo(context),
-        SizedBox(height: AppStyle.h(2.5).clamp(8.0, 16.0)),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildProfileHeader(context),
+          SizedBox(height: AppStyle.h(4).clamp(16.0, 32.0)),
+          _buildPersonalInfo(context),
+          SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
+          _buildWorkInfo(context),
+          SizedBox(height: AppStyle.h(2.5).clamp(8.0, 16.0)),
+        ],
+      ),
     );
   }
 
@@ -582,7 +671,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 1, child: Column(children: [_buildProfileHeader(context)])),
+        Expanded(
+          flex: 1,
+          child: Column(children: [_buildProfileHeader(context)]),
+        ),
         SizedBox(width: AppStyle.w(4).clamp(16.0, 32.0)),
         Expanded(
           flex: 1,
@@ -608,7 +700,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppStyle.appBarColor, AppStyle.appBarColor.withOpacity(.7)],
+            colors: [
+              AppStyle.appBarColor,
+              AppStyle.appBarColor.withOpacity(.7),
+            ],
             begin: Alignment.bottomRight,
             end: Alignment.topLeft,
           ),
@@ -629,18 +724,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
             Text(
               loginResponse.data!.user.name,
-              style: AppStyle.headTextStyle().copyWith(color: AppStyle.appBarTextColor),
+              style: AppStyle.headTextStyle().copyWith(
+                color: AppStyle.appBarTextColor,
+              ),
             ),
             if (loginResponse.data!.user.userType == 'head')
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppStyle.w(4), vertical: AppStyle.h(2)),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppStyle.w(4),
+                  vertical: AppStyle.h(2),
+                ),
                 child: Chip(
                   label: Text(
                     'All Branches',
-                    style: AppStyle.normalTextStyle().copyWith(color: AppStyle.appBarColor),
+                    style: AppStyle.normalTextStyle().copyWith(
+                      color: AppStyle.appBarColor,
+                    ),
                   ),
                   backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               ),
             Text(
@@ -653,7 +757,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () => _showEditProfileBottomSheet(context),
               icon: Icon(Icons.edit, size: AppStyle.w(4).clamp(16.0, 20.0)),
@@ -784,8 +890,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     String formattedLastLogin = 'Not specified';
     try {
       // debugPrint('loginResponse.timestamp: ${loginResponse.timestamp}');
-      if (loginResponse.timestamp != null && loginResponse.timestamp!.isNotEmpty) {
-        final dateTime = DateTime.parse(loginResponse.data!.user.templateId.createdAt);
+      if (loginResponse.timestamp != null &&
+          loginResponse.timestamp!.isNotEmpty) {
+        final dateTime = DateTime.parse(
+          loginResponse.data!.user.templateId.createdAt,
+        );
         formattedLastLogin = DateFormat('dd MMM yyyy').format(dateTime);
       }
     } catch (e) {
@@ -804,10 +913,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             Text("Work Information", style: AppStyle.headTextStyle()),
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
             infoRow(Icons.date_range, "Date of Joining", formattedLastLogin),
-            infoRow(Icons.business, "Designation", loginResponse.data!.user.userType),
+            infoRow(
+              Icons.business,
+              "Designation",
+              loginResponse.data!.user.userType,
+            ),
             infoRow(Icons.work, "Grade", loginResponse.data!.user.grade),
             if (loginResponse.data!.user.userType != 'head')
-              infoRow(Icons.person_pin, "Reporting To", reportingTo), // Use managerName here
+              infoRow(
+                Icons.person_pin,
+                "Reporting To",
+                reportingTo,
+              ), // Use managerName here
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
             Center(
               child: Container(
@@ -815,7 +932,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 padding: EdgeInsets.all(AppStyle.w(5).clamp(16.0, 32.0)),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppStyle.appBarColor, AppStyle.appBarColor.withOpacity(0.7)],
+                    colors: [
+                      AppStyle.appBarColor,
+                      AppStyle.appBarColor.withOpacity(0.7),
+                    ],
                     begin: Alignment.bottomRight,
                     end: Alignment.topLeft,
                   ),
@@ -826,16 +946,21 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   children: [
                     Text(
                       "Quick Status",
-                      style: AppStyle.headTextStyle().copyWith(color: AppStyle.appBarTextColor),
+                      style: AppStyle.headTextStyle().copyWith(
+                        color: AppStyle.appBarTextColor,
+                      ),
                     ),
                     SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
 
                     Obx(() {
                       final thisMonthSales =
-                          salesComparisonController.thisMonthSalesData.value ?? 0.0;
+                          salesComparisonController.thisMonthSalesData.value ??
+                          0.0;
                       return Text(
                         "Total Sales This Month : ₹${thisMonthSales.toStringAsFixed(0)}",
-                        style: AppStyle.normalTextStyle().copyWith(color: AppStyle.appBarTextColor),
+                        style: AppStyle.normalTextStyle().copyWith(
+                          color: AppStyle.appBarTextColor,
+                        ),
                       );
                     }),
                     //
@@ -845,7 +970,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     // ),
                     Text(
                       "Performance Rating : ₹${totalSalesController.myIncentive.value != null ? totalSalesController.myIncentive.value!.toStringAsFixed(2) : 'N/A'}",
-                      style: AppStyle.normalTextStyle().copyWith(color: AppStyle.appBarTextColor),
+                      style: AppStyle.normalTextStyle().copyWith(
+                        color: AppStyle.appBarTextColor,
+                      ),
                     ),
                   ],
                 ),
@@ -863,21 +990,21 @@ class _AnimatedButton extends StatefulWidget {
   final VoidCallback? onPressed;
   final Color color;
   final Color textColor;
-  final LinearGradient? gradient;
+  // final LinearGradient? gradient;
 
   const _AnimatedButton({
     required this.text,
     required this.onPressed,
     required this.color,
     required this.textColor,
-    this.gradient,
   });
 
   @override
   _AnimatedButtonState createState() => _AnimatedButtonState();
 }
 
-class _AnimatedButtonState extends State<_AnimatedButton> with SingleTickerProviderStateMixin {
+class _AnimatedButtonState extends State<_AnimatedButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _scaleController;
   late Animation<double> _scaleAnimation;
 
@@ -888,10 +1015,9 @@ class _AnimatedButtonState extends State<_AnimatedButton> with SingleTickerProvi
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -930,8 +1056,7 @@ class _AnimatedButtonState extends State<_AnimatedButton> with SingleTickerProvi
                 vertical: AppStyle.h(3).clamp(12.0, 16.0),
               ),
               decoration: BoxDecoration(
-                gradient: widget.gradient,
-                color: widget.gradient == null ? widget.color : null,
+                color: widget.color,
                 borderRadius: BorderRadius.circular(AppStyle.w(3)),
                 boxShadow: widget.onPressed == null
                     ? null
