@@ -10,7 +10,6 @@ import 'package:mbindiamy/widget/appbar_widget.dart';
 import 'package:mbindiamy/widget/navigator_widget.dart';
 import 'package:mbindiamy/controllers/login_controller.dart';
 import 'package:mbindiamy/controllers/reporting_controller.dart';
-
 import '../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/total_sales_controller.dart';
@@ -36,11 +35,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   late final AnimationController _fadeController;
   late final List<Animation<double>> _fieldFadeAnimations;
 
-  // bool _isUpdating = false;
-  // String? _selectedBranchId;
-
   final LoginController loginController = Get.find<LoginController>();
-  final ReportingManagerController reportingManagerController = Get.find<ReportingManagerController>();
+  final ReportingManagerController reportingManagerController =
+      Get.find<ReportingManagerController>();
   final SalesComparisonController salesComparisonController =
       Get.find<SalesComparisonController>();
   final TotalSalesController totalSalesController =
@@ -77,7 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       duration: const Duration(milliseconds: 800),
     );
     _fieldFadeAnimations = List.generate(
-      6, //
+      6,
       (index) => Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _fadeController,
@@ -127,18 +124,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     _phoneController.text = user.mobile;
     _locationController.text = user.id;
 
-    // // Fix: Set initial value to first branch or null if empty
-    // _selectedBranchId = user.selectedBranchAliases.isNotEmpty
-    //     ? user.selectedBranchAliases.first
-    //     : null;
-
     _bottomSheetController.forward();
     _fadeController.forward();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppStyle.w(6)),
+        ),
+      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
@@ -158,320 +155,191 @@ class _ProfileScreenState extends State<ProfileScreen>
                   maxHeight: AppStyle.screenHeight * 0.65,
                   minHeight: AppStyle.screenHeight * 0.4,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(AppStyle.w(6)),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppStyle.w(5),
+                    AppStyle.h(3),
+                    AppStyle.w(5),
+                    MediaQuery.of(context).viewInsets.bottom + AppStyle.h(3),
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      // gradient: LinearGradient(
-                      //   colors: [
-                      //     Colors.white.withOpacity(0.75),
-                      //     Colors.white.withOpacity(0.6),
-                      //   ],
-                      //   begin: Alignment.topLeft,
-                      //   end: Alignment.bottomRight,
-                      // ),
-                      // boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.black.withOpacity(0.15),
-                      //     blurRadius: 12,
-                      //     offset: const Offset(0, -4),
-                      //   ),
-                      // ],
-                      // border: Border.all(
-                      //   color: Colors.white.withOpacity(0.3),
-                      //   width: 1.2,
-                      // ),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppStyle.w(5),
-                          AppStyle.h(3),
-                          AppStyle.w(5),
-                          MediaQuery.of(context).viewInsets.bottom +
-                              AppStyle.h(3),
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Container(
-                            padding: EdgeInsets.all(AppStyle.w(5)),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(AppStyle.w(6)),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, -2),
+                  child: Form(
+                    key: _formKey,
+                    child: Container(
+                      padding: EdgeInsets.all(AppStyle.w(5)),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FadeTransition(
+                              opacity: _fieldFadeAnimations[0],
+                              child: Text(
+                                'Edit Profile',
+                                style: AppStyle.headTextStyle().copyWith(
+                                  fontSize: AppStyle.headFontSize,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  FadeTransition(
-                                    opacity: _fieldFadeAnimations[0],
-                                    child: Text(
-                                      'Edit Profile',
-                                      style: AppStyle.headTextStyle().copyWith(
-                                        fontSize: AppStyle.headFontSize,
-                                        fontWeight: FontWeight.bold,
-                                        // color: ,
+                            SizedBox(height: AppStyle.h(2)),
+                            Divider(
+                              thickness: 1,
+                              color: Colors.grey.withOpacity(0.3),
+                            ),
+                            _buildAnimatedField(
+                              index: 1,
+                              controller: _nameController,
+                              label: 'Name',
+                              icon: Icons.person,
+                              validator: (v) => v!.trim().isEmpty
+                                  ? 'Please enter your name'
+                                  : null,
+                            ),
+                            _buildAnimatedField(
+                              index: 2,
+                              controller: _emailController,
+                              label: 'Email',
+                              icon: Icons.email,
+                              inputType: TextInputType.emailAddress,
+                              validator: (v) {
+                                if (v!.trim().isEmpty)
+                                  return 'Please enter your email';
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(v)) {
+                                  return 'Enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            _buildAnimatedField(
+                              index: 3,
+                              controller: _phoneController,
+                              label: 'Phone',
+                              icon: Icons.phone,
+                              inputType: TextInputType.phone,
+                              validator: (v) {
+                                if (v!.trim().isEmpty)
+                                  return 'Please enter your phone';
+                                if (!RegExp(
+                                  r'^[\+?\d\s-]{10,15}$',
+                                ).hasMatch(v)) {
+                                  return 'Enter a valid number';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: AppStyle.h(3)),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: profileController.isLoading.value
+                                        ? null
+                                        : () {
+                                            if (_formKey.currentState != null) {
+                                              _formKey.currentState!.reset();
+                                            }
+                                            _nameController.text = user.name;
+                                            _emailController.text = user.email;
+                                            _phoneController.text = user.mobile;
+                                            _locationController.text = user.id;
+                                            _bottomSheetController.reverse();
+                                            Navigator.pop(context);
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey.shade200,
+                                      foregroundColor: Colors.black87,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
                                       ),
-                                      textAlign: TextAlign.center,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     ),
+                                    child: const Text('Cancel'),
                                   ),
-                                  SizedBox(height: AppStyle.h(2)),
-                                  Divider(
-                                    thickness: 1,
-                                    color: Colors.grey.withOpacity(0.3),
-                                  ),
-                                  _buildAnimatedField(
-                                    index: 1,
-                                    controller: _nameController,
-                                    label: 'Name',
-                                    icon: Icons.person,
-                                    validator: (v) => v!.trim().isEmpty
-                                        ? 'Please enter your name'
-                                        : null,
-                                  ),
-                                  _buildAnimatedField(
-                                    index: 2,
-                                    controller: _emailController,
-                                    label: 'Email',
-                                    icon: Icons.email,
-                                    inputType: TextInputType.emailAddress,
-                                    validator: (v) {
-                                      if (v!.trim().isEmpty)
-                                        return 'Please enter your email';
-                                      if (!RegExp(
-                                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                      ).hasMatch(v)) {
-                                        return 'Enter a valid email';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  _buildAnimatedField(
-                                    index: 3,
-                                    controller: _phoneController,
-                                    label: 'Phone',
-                                    icon: Icons.phone,
-                                    inputType: TextInputType.phone,
-                                    validator: (v) {
-                                      if (v!.trim().isEmpty)
-                                        return 'Please enter your phone';
-                                      if (!RegExp(
-                                        r'^[\+?\d\s-]{10,15}$',
-                                      ).hasMatch(v)) {
-                                        return 'Enter a valid number';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  // _buildAnimatedField(
-                                  //   index: 4,
-                                  //   controller: _locationController,
-                                  //   label: 'User ID',
-                                  //   icon: Icons.badge,
-                                  //   validator: (v) => v!.trim().isEmpty ? 'Please enter your user ID' : null,
-                                  // ),
-                                  // Padding(
-                                  //   padding: EdgeInsets.only(top: AppStyle.h(3)),
-                                  //   child: FadeTransition(
-                                  //     opacity: _fieldFadeAnimations[5],
-                                  //     child: DropdownButtonFormField<String>(
-                                  //       value: _selectedBranchId,
-                                  //       decoration: InputDecoration(
-                                  //         labelText: 'Branch',
-                                  //         prefixIcon: Icon(Icons.store, color: AppStyle.appBarColor),
-                                  //         filled: true,
-                                  //         fillColor: Colors.white.withOpacity(0.9),
-                                  //         border: OutlineInputBorder(
-                                  //           borderRadius: BorderRadius.circular(AppStyle.w(3)),
-                                  //           borderSide: BorderSide.none,
-                                  //         ),
-                                  //         contentPadding: EdgeInsets.symmetric(
-                                  //           horizontal: AppStyle.w(4),
-                                  //           vertical: AppStyle.h(2.5),
-                                  //         ),
-                                  //       ),
-                                  //       items: user.selectedBranchAliases.isEmpty
-                                  //           ? [
-                                  //               const DropdownMenuItem(
-                                  //                 value: 'No Branches',
-                                  //                 child: Text('No Branches'),
-                                  //               ),
-                                  //             ]
-                                  //           : user.selectedBranchAliases.map((branch) {
-                                  //               return DropdownMenuItem(
-                                  //                 value: branch,
-                                  //                 child: Text(branch),
-                                  //               );
-                                  //             }).toList(),
-                                  //       onChanged: (value) {
-                                  //         setState(() {
-                                  //           _selectedBranchId = value;
-                                  //         });
-                                  //       },
-                                  //       validator: (value) {
-                                  //         if (user.userType != 'head' && value == null) {
-                                  //           return 'Please select a branch';
-                                  //         }
-                                  //         return null;
-                                  //       },
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                  SizedBox(height: AppStyle.h(3)),
+                                ),
+                                SizedBox(width: AppStyle.w(3)),
+                                Expanded(
+                                  child: Obx(
+                                    () => ElevatedButton(
+                                      onPressed:
+                                          profileController.isLoading.value
+                                          ? null
+                                          : () async {
+                                              if (_formKey.currentState!
+                                                  .validate()) {
+                                                await profileController
+                                                    .updateProfile(
+                                                      id: user.id,
+                                                      name: _nameController.text
+                                                          .trim(),
+                                                      email: _emailController
+                                                          .text
+                                                          .trim(),
+                                                      mobile: _phoneController
+                                                          .text
+                                                          .trim(),
+                                                    );
 
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed:
-                                              profileController.isLoading.value
-                                              ? null
-                                              : () {
-                                                  if (_formKey.currentState !=
-                                                      null) {
-                                                    _formKey.currentState!
-                                                        .reset();
-                                                  }
-                                                  _nameController.text =
-                                                      user.name;
-                                                  _emailController.text =
-                                                      user.email;
-                                                  _phoneController.text =
-                                                      user.mobile;
-                                                  _locationController.text =
-                                                      user.id;
-                                                  // _selectedBranchId = user.id;
+                                                if (profileController
+                                                        .errorMessage
+                                                        .value !=
+                                                    null) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        profileController
+                                                            .errorMessage
+                                                            .value!,
+                                                      ),
+                                                    ),
+                                                  );
+                                                } else {
                                                   _bottomSheetController
                                                       .reverse();
                                                   Navigator.pop(context);
-                                                },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                Colors.grey.shade200,
-                                            foregroundColor: Colors.black87,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 14,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          child: const Text('Cancel'),
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Profile updated successfully!',
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            profileController.isLoading.value
+                                            ? Colors.grey
+                                            : AppStyle.appBarColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
                                         ),
-                                      ),
-                                      SizedBox(width: AppStyle.w(3)),
-                                      Expanded(
-                                        child: Obx(
-                                          () => ElevatedButton(
-                                            onPressed:
-                                                profileController
-                                                    .isLoading
-                                                    .value
-                                                ? null
-                                                : () async {
-                                                    if (_formKey.currentState!
-                                                        .validate()) {
-                                                      // if (user.userType != 'head' && _selectedBranchId == null) {
-                                                      //   ScaffoldMessenger.of(context).showSnackBar(
-                                                      //     const SnackBar(
-                                                      //       content: Text('Branch ID is required'),
-                                                      //     ),
-                                                      //   );
-                                                      //   return;
-                                                      // }
-
-                                                      await profileController
-                                                          .updateProfile(
-                                                            id: user.id,
-                                                            name:
-                                                                _nameController
-                                                                    .text
-                                                                    .trim(),
-                                                            email:
-                                                                _emailController
-                                                                    .text
-                                                                    .trim(),
-                                                            mobile:
-                                                                _phoneController
-                                                                    .text
-                                                                    .trim(),
-                                                          );
-
-                                                      if (profileController
-                                                              .errorMessage
-                                                              .value !=
-                                                          null) {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                              profileController
-                                                                  .errorMessage
-                                                                  .value!,
-                                                            ),
-                                                          ),
-                                                        );
-                                                      } else {
-                                                        _bottomSheetController
-                                                            .reverse();
-                                                        Navigator.pop(context);
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                              'Profile updated successfully!',
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }
-                                                    }
-                                                  },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  profileController
-                                                      .isLoading
-                                                      .value
-                                                  ? Colors.grey
-                                                  : AppStyle.appBarColor,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 14,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              profileController.isLoading.value
-                                                  ? 'Saving...'
-                                                  : 'Save',
-                                            ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
                                       ),
-                                    ],
+                                      child: Text(
+                                        profileController.isLoading.value
+                                            ? 'Saving...'
+                                            : 'Save',
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -551,7 +419,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   style: AppStyle.normalTextStyle().copyWith(
                     fontWeight: FontWeight.w600,
                   ),
-
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
@@ -572,7 +439,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (loginResponse == null) {
         return const Center(child: CircularProgressIndicator());
       }
-      // final currentUser = loginResponse.data?.user;
 
       final bool isTabletOrDesktop = AppStyle.isTablet || AppStyle.isDesktop;
       final maxContentWidth =
@@ -581,17 +447,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             900.0,
           );
       final horizontalPadding = _getHorizontalPadding();
-
-      // final String displayUserId = currentUser?.userType == 'head'
-      //     ? 'All Branches'
-      //     : (currentUser!.selectedBranchAliases.isNotEmpty
-      //           ? currentUser.selectedBranchAliases.first
-      //           : '');
-      // final String displayUserId = currentUser?.isAllBranches == true
-      //     ? 'All Branches'
-      //     : (currentUser!.selectedBranchAliases.isNotEmpty
-      //     ? currentUser.selectedBranchAliases.first
-      //     : '');
 
       final userName =
           loginController.loginResponse.value?.data!.user.name ?? "Loading...";
@@ -604,15 +459,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 user.isAllBranches == true)
           ? 'All Branches'
           : (user.selectedBranchAliases.isNotEmpty
-                ? user.selectedBranchAliases.join(
-                    ', ',
-                  ) // joins all branches as a string
+                ? user.selectedBranchAliases.join(', ')
                 : '');
       return Scaffold(
         drawer: NavigationDrawerWidget(),
         appBar: CustomAppBar(
           userName: userName,
-          // userId: userId,
           reportingTo: reportingManagerController.manager.value,
           onNotificationPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -659,9 +511,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildProfileHeader(context),
-          // SizedBox(height: AppStyle.h(4).clamp(16.0, 32.0)),
           _buildPersonalInfo(context),
-          // SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
           _buildWorkInfo(context),
           SizedBox(height: AppStyle.h(2.5).clamp(8.0, 16.0)),
         ],
@@ -774,96 +624,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
     );
-
-    // return Container(
-    //   margin: EdgeInsets.only(top: AppStyle.h(2).clamp(8.0, 16.0)),
-    //   padding: EdgeInsets.all(AppStyle.w(5).clamp(14.0, 30.0)),
-    //   decoration: BoxDecoration(
-    //     gradient: LinearGradient(
-    //       colors: [AppStyle.appBarColor, AppStyle.appBarColor.withOpacity(.7)],
-    //       begin: Alignment.bottomRight,
-    //       end: Alignment.topLeft,
-    //     ),
-    //     borderRadius: BorderRadius.circular(12),
-    //   ),
-    //   child: Column(
-    //     children: [
-    //       CircleAvatar(
-    //         radius: AppStyle.w(10).clamp(40.0, 60.0),
-    //         backgroundColor: Colors.white,
-    //         child: Icon(
-    //           Icons.person,
-    //           size: AppStyle.w(15).clamp(40.0, 60.0),
-    //           color: AppStyle.textColor,
-    //         ),
-    //       ),
-    //       SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-    //       Text(
-    //         loginResponse.data.user.name,
-    //         style: AppStyle.headTextStyle().copyWith(
-    //           color: AppStyle.appBarTextColor,
-    //         ),
-    //       ),
-    //       if (loginResponse.data.user.userType == 'head')
-    //         Padding(
-    //           padding: EdgeInsets.symmetric(
-    //             horizontal: AppStyle.w(4),
-    //             vertical: AppStyle.h(2),
-    //           ),
-    //           child: Chip(
-    //             label: Text(
-    //               'All Branches',
-    //               style: AppStyle.normalTextStyle().copyWith(
-    //                 color: AppStyle.appBarColor,
-    //               ),
-    //             ),
-    //             backgroundColor: Colors.white,
-    //             shape: RoundedRectangleBorder(
-    //               borderRadius: BorderRadius.circular(20),
-    //             ),
-    //           ),
-    //         )
-    //       else if (loginResponse.data.user.selectedBranchAliases.isNotEmpty)
-    //         Container(
-    //           height: loginResponse.data.user.selectedBranchAliases.length > 2
-    //               ? AppStyle.h(12)
-    //               : AppStyle.h(8),
-    //           padding: EdgeInsets.symmetric(horizontal: AppStyle.w(4)),
-    //           child: SingleChildScrollView(
-    //             child: Wrap(
-    //               spacing: AppStyle.w(2),
-    //               runSpacing: AppStyle.h(1),
-    //               children: loginResponse.data.user.selectedBranchAliases.map((
-    //                 branch,
-    //               ) {
-    //                 return Text(branch);
-    //               }).toList(),
-    //             ),
-    //           ),
-    //         )
-    //       else
-    //         Text('No branches assigned'),
-    //       Text(
-    //         loginResponse.data.user.grade,
-    //         style: AppStyle.normalTextStyle().copyWith(
-    //           color: AppStyle.appBarTextColor.withOpacity(0.7),
-    //         ),
-    //       ),
-    //       SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-    //       ElevatedButton.icon(
-    //         style: ElevatedButton.styleFrom(
-    //           backgroundColor: Colors.white,
-    //           shape: RoundedRectangleBorder(
-    //             borderRadius: BorderRadius.circular(8),
-    //           ),
-    //         ),
-    //         onPressed: () => _showEditProfileBottomSheet(context),
-    //         icon: Icon(Icons.edit, size: AppStyle.w(4).clamp(16.0, 20.0)),
-    //         label: Text('Edit Profile', style: AppStyle.normalTextStyle()),
-    //       ),
-    //     ],
-    //   ),
-    // );
   }
 
   Widget _buildPersonalInfo(BuildContext context) {
@@ -893,7 +653,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               "Phone",
               loginResponse.data!.user.mobile,
             ),
-            //infoRow(Icons.badge, "User ID", loginResponse.data.user.id),
           ],
         ),
       ),
@@ -909,14 +668,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
         ? 'All Branches'
         : (user.selectedBranchAliases.isNotEmpty
-              ? user.selectedBranchAliases.join(
-                  ', ',
-                ) // joins all branches as a string
+              ? user.selectedBranchAliases.join(', ')
               : '');
     if (loginResponse == null) return const SizedBox.shrink();
     String formattedLastLogin = 'Not specified';
     try {
-      // debugPrint('loginResponse.timestamp: ${loginResponse.timestamp}');
       if (loginResponse.timestamp != null &&
           loginResponse.timestamp!.isNotEmpty) {
         final dateTime = DateTime.parse(
@@ -925,10 +681,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         formattedLastLogin = DateFormat('dd MMM yyyy').format(dateTime);
       }
     } catch (e) {
-      // Keep default 'Not specified' if parsing\ fails
+      // Keep default 'Not specified' if parsing fails
     }
-    // Fetch the manager's name from ReportingManagerController
-    // final managerName = reportingManagerController.manager.value?.name ?? loginResponse.data.user.reportingTo;
     final reportingTo = reportingManagerController.manager.value.toString();
     return Card(
       color: Colors.white,
@@ -956,11 +710,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             infoRow(CupertinoIcons.app_badge, "Grade", userId),
             if (loginResponse.data!.user.userType != 'head')
-              infoRow(
-                Icons.person_pin,
-                "Reporting To",
-                reportingTo,
-              ), // Use managerName here
+              infoRow(Icons.person_pin, "Reporting To", reportingTo),
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
             Center(
               child: Container(
@@ -987,7 +737,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-
                     Obx(() {
                       final thisMonthSales =
                           salesComparisonController.thisMonthSalesData.value ??
@@ -999,11 +748,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       );
                     }),
-                    //
-                    // Text(
-                    //   "Targets Achieved: 10/10",
-                    //   style: AppStyle.normalTextStyle().copyWith(color: AppStyle.appBarTextColor),
-                    // ),
                     Text(
                       "Performance Rating : ₹${totalSalesController.myIncentive.value != null ? totalSalesController.myIncentive.value!.toStringAsFixed(2) : 'N/A'}",
                       style: AppStyle.normalTextStyle().copyWith(
@@ -1016,107 +760,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _AnimatedButton extends StatefulWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final Color color;
-  final Color textColor;
-
-  // final LinearGradient? gradient;
-
-  const _AnimatedButton({
-    required this.text,
-    required this.onPressed,
-    required this.color,
-    required this.textColor,
-  });
-
-  @override
-  _AnimatedButtonState createState() => _AnimatedButtonState();
-}
-
-class _AnimatedButtonState extends State<_AnimatedButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _scaleController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        if (widget.onPressed != null) {
-          _scaleController.forward();
-        }
-      },
-      onTapUp: (_) {
-        if (widget.onPressed != null) {
-          _scaleController.reverse();
-          widget.onPressed!();
-        }
-      },
-      onTapCancel: () {
-        if (widget.onPressed != null) {
-          _scaleController.reverse();
-        }
-      },
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppStyle.w(8).clamp(24.0, 40.0),
-                vertical: AppStyle.h(3).clamp(12.0, 16.0),
-              ),
-              decoration: BoxDecoration(
-                color: widget.color,
-                borderRadius: BorderRadius.circular(AppStyle.w(3)),
-                boxShadow: widget.onPressed == null
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: widget.color.withOpacity(0.4),
-                          blurRadius: AppStyle.w(6),
-                          offset: Offset(0, AppStyle.h(2)),
-                          spreadRadius: 1,
-                        ),
-                      ],
-              ),
-              child: Text(
-                widget.text,
-                style: AppStyle.normalTextStyle().copyWith(
-                  color: widget.textColor,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        },
       ),
     );
   }

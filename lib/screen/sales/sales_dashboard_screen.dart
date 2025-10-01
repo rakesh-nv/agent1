@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
-import 'package:mbindiamy/style/appstyle.dart';
+import 'package:mbindiamy/controllers/salesAgentController/currentPhaseController.dart';
 import 'package:mbindiamy/controllers/login_controller.dart';
 import 'package:mbindiamy/controllers/promise_actual_controller.dart';
 import 'package:mbindiamy/controllers/reporting_controller.dart';
@@ -11,7 +11,7 @@ import 'package:mbindiamy/controllers/top_articles_controller.dart';
 import 'package:mbindiamy/controllers/filter_controller.dart';
 import 'package:mbindiamy/widget/appbar_widget.dart';
 import 'package:mbindiamy/widget/navigator_widget.dart';
-import 'package:mbindiamy/model/top_artical_model.dart';
+import 'package:mbindiamy/model/salesagentModel/sales_comparison_by_phase_modal.dart';
 
 import '../../branch/stafInBranch/billingManager.dart';
 import '../../controllers/subordinates_sales_vs_promise_controller.dart';
@@ -67,6 +67,8 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
   final FilterController filterController = Get.find<FilterController>();
   final SubordinatesSalesVsPromiseController
   subordinatesSalesVsPromiseController = Get.find();
+  final CurrentPhaseController currentPhaseController =
+      Get.find<CurrentPhaseController>();
 
   @override
   void initState() {
@@ -85,6 +87,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
         reportingController.getReportingManager(),
         promiseController.loadPromiseActualData(),
         salesPhaseController.loadSalesByPhase(),
+        currentPhaseController.loadCurrentPhase(),
         subordinatesSalesVsPromiseController.fetchSubordinatesSalesVsPromise(),
         // filterController.loadFilters(), // uncomment if needed
       ]);
@@ -153,7 +156,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
     return Obx(() {
       final userName =
           loginController.loginResponse.value?.data!.user.name ?? "Loading...";
-      final userId = loginController.loginResponse.value?.data?.user.id ?? '';
+      // Removed unused userId
       // final reportingName = reportingController.manager.value?? "Loading...";
       final reportingName = reportingController.manager.value ?? "Loading...";
       // Get sales data from TotalSalesController
@@ -268,7 +271,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
         }
       }
 
-      final loginResponse = loginController.loginResponse.value;
+      // Removed unused loginResponse
       // final user = loginResponse?.data?.user;
       // final userId = user == null
       //     ? ''
@@ -843,7 +846,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
               spacing: MediaQuery.of(context).size.height * .01,
               children: [
                 Text(
-                  article.articleNo ?? 'N/A',
+                  article.articleNo,
                   maxLines: 2,
                   style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
@@ -1167,53 +1170,87 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
 }
 
 class PhaseTwoInfoWidget extends StatelessWidget {
-  final DateTime startDate = DateTime(2025, 4);
-  final DateTime endDate = DateTime(2026, 4);
-
-  final SalesByPhaseController salesPhaseController =
-      Get.find<SalesByPhaseController>();
+  final CurrentPhaseController currentPhaseController =
+      Get.find<CurrentPhaseController>();
 
   PhaseTwoInfoWidget({super.key});
 
-  String getPhaseTwoDateRange() {
-    final phase2Start = DateTime(startDate.year, startDate.month + 3);
-    final phase2End = DateTime(
-      phase2Start.year,
-      phase2Start.month + 3,
-    ).subtract(const Duration(days: 1));
-    final formatter = DateFormat('MMM yyyy');
-    return "${formatter.format(phase2Start)} - ${formatter.format(phase2End)}";
+  int getCurrentPhaseNumber() {
+    // Fiscal year starts in April. Phases are 3 months each:
+    // P1: Apr-Jun, P2: Jul-Sep, P3: Oct-Dec, P4: Jan-Mar
+    final int month = DateTime.now().month;
+    final int fiscalIndex = (month - 4 + 12) % 12; // 0..11 starting at Apr
+    return (fiscalIndex ~/ 3) + 1; // 1..4
   }
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final phaseData = {
-        "currentPhase":
-            salesPhaseController.salesData.value?.data.currentPhase ??
-            "Loading...",
-        "phase1": (salesPhaseController.salesData.value?.data.phase1 ?? 0)
-            .toDouble(),
-        "phase2": (salesPhaseController.salesData.value?.data.phase2 ?? 0)
-            .toDouble(),
-        "phase3": (salesPhaseController.salesData.value?.data.phase3 ?? 0)
-            .toDouble(),
-        "phase4": (salesPhaseController.salesData.value?.data.phase4 ?? 0)
-            .toDouble(),
-      };
-      final phaseRange = getPhaseTwoDateRange();
-      final phaseTarget = (phaseData["phase2"] as num?)?.toDouble() ?? 0.0;
-      final salesTillNow =
-          ((phaseData["phase1"] as num?)?.toDouble() ?? 0.0) +
-          ((phaseData["phase2"] as num?)?.toDouble() ?? 0.0) +
-          ((phaseData["phase3"] as num?)?.toDouble() ?? 0.0) +
-          ((phaseData["phase4"] as num?)?.toDouble() ?? 0.0);
-
       final isMobile = SizeConfig.isMobile;
       final padding = isMobile ? SizeConfig.w(10) : SizeConfig.w(18);
-      final fontSize = isMobile ? SizeConfig.w(13) : SizeConfig.w(18);
-      final amountFontSize = isMobile ? SizeConfig.w(16) : SizeConfig.w(20);
       final gap = isMobile ? SizeConfig.w(12) : SizeConfig.w(20);
+
+      final isLoading = currentPhaseController.isLoading.value;
+      final error = currentPhaseController.errorMessage.value;
+      final response = currentPhaseController.salesData.value;
+      final data = response?.data;
+      final items = data?.data ?? [];
+
+      if (isLoading) {
+        return Padding(
+          padding: EdgeInsets.all(SizeConfig.w(12)),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      } else if (error != null) {
+        return Padding(
+          padding: EdgeInsets.all(SizeConfig.w(12)),
+          child: Text(error, style: AppTextStyles.bodyText(color: Colors.red)),
+        );
+      } else if (items.isEmpty) {
+        return Padding(
+          padding: EdgeInsets.all(SizeConfig.w(12)),
+          child: Text(
+            "No data available",
+            style: AppTextStyles.bodyText(color: Colors.grey),
+          ),
+        );
+      }
+
+      final currentPhaseNumber = getCurrentPhaseNumber();
+      SalesComparisonByPhaseItem currentPhaseItem = items.first;
+      // Prefer matching by explicit phase label
+      final byLabel = items.where((item) {
+        final phaseLabel = item.phase.toLowerCase().replaceAll(' ', '');
+        return phaseLabel == 'phase$currentPhaseNumber';
+      }).toList();
+      if (byLabel.isNotEmpty) {
+        currentPhaseItem = byLabel.first;
+      } else {
+        // Fallback: match by month range of start/end dates
+        int startMonth = 4 + (currentPhaseNumber - 1) * 3; // 4,7,10,13
+        int endMonth = startMonth + 2; // inclusive
+        // Normalize to calendar months (wrap Jan-Mar)
+        startMonth = ((startMonth - 1) % 12) + 1; // 4,7,10,1
+        endMonth = ((endMonth - 1) % 12) + 1; // 6,9,12,3
+        for (final item in items) {
+          try {
+            final sm = DateTime.parse(item.startDate).month;
+            final em = DateTime.parse(item.endDate).month;
+            if (sm == startMonth && em == endMonth) {
+              currentPhaseItem = item;
+              break;
+            }
+          } catch (_) {
+            // ignore parse errors, keep default
+          }
+        }
+      }
+
+      final int phaseThisYear = currentPhaseItem.totalSaleThisYear;
+      final int totalThisYear = items.fold(
+        0,
+        (sum, e) => sum + (e.totalSaleThisYear),
+      );
 
       return Card(
         color: Colors.white,
@@ -1238,14 +1275,12 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                 horizontal: padding,
                 vertical: SizeConfig.h(8),
               ),
-              decoration: BoxDecoration(
-                // color: Colors.blue,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool wide = constraints.maxWidth >= 600;
+                  final children = <Widget>[
+                    // Left card: Current phase performance
                     Expanded(
                       child: Card(
                         elevation: 0,
@@ -1254,23 +1289,14 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                         ),
                         child: Container(
                           padding: EdgeInsets.all(padding * 0.8),
-                          // Reduced padding
                           decoration: BoxDecoration(
                             color: const Color(0xFFE3F2FD),
-                            // Light blue background
                             borderRadius: BorderRadius.circular(
                               SizeConfig.w(8),
                             ),
-                            // boxShadow: const [
-                            //   BoxShadow(
-                            //     color: Colors.black12,
-                            //     blurRadius: 4,
-                            //     offset: Offset(0, 2),
-                            //   ),
-                            // ],
                           ),
                           constraints: BoxConstraints(
-                            minHeight: SizeConfig.h(80), // Reduced minHeight
+                            minHeight: SizeConfig.h(80),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1282,25 +1308,35 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                                   Row(
                                     children: [
                                       Text(
-                                        (phaseData["currentPhase"] as String?)
-                                                    ?.isNotEmpty ==
-                                                true
-                                            ? "Current Phase: ${phaseData["currentPhase"]}"
-                                            : "Loading phase data...",
+                                        "Current Phase: Phase $currentPhaseNumber",
                                         style: AppTextStyles.bodyText(
                                           color: Colors.black,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      Text(
-                                        "($phaseRange)",
-                                        style: AppTextStyles.captionText(
-                                          color: Colors.grey,
-                                        ),
+                                      Builder(
+                                        builder: (_) {
+                                          String rangeText = '';
+                                          try {
+                                            final sd = DateTime.parse(
+                                              currentPhaseItem.startDate,
+                                            );
+                                            final ed = DateTime.parse(
+                                              currentPhaseItem.endDate,
+                                            );
+                                            rangeText =
+                                                "(${DateFormat('MMM yyyy').format(sd)} - ${DateFormat('MMM yyyy').format(ed)})";
+                                          } catch (_) {}
+                                          return Text(
+                                            rangeText,
+                                            style: AppTextStyles.captionText(
+                                              color: Colors.grey,
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
-
                                   Icon(
                                     Icons.trending_up,
                                     color: Colors.blue,
@@ -1319,18 +1355,26 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  "₹${NumberFormat('#,##,###').format(phaseTarget)}",
+                                  "₹${NumberFormat('#,##,###').format(phaseThisYear)}",
                                   style: AppTextStyles.headlineText(
                                     color: Colors.blue,
                                   ),
                                 ),
                               ),
+                              // SizedBox(height: SizeConfig.h(4)),
+                              // Text(
+                              //   "Last Year: ₹${NumberFormat('#,##,###').format(currentPhaseItem.totalSaleLastYear)}",
+                              //   style: AppTextStyles.captionText(
+                              //     color: Colors.grey,
+                              //   ),
+                              // ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: gap),
+                    SizedBox(width: gap, height: gap),
+                    // Right card: Annual performance (sum of phases)
                     Expanded(
                       child: Card(
                         elevation: 0,
@@ -1339,23 +1383,14 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                         ),
                         child: Container(
                           padding: EdgeInsets.all(padding * 0.8),
-                          // Reduced padding
                           decoration: BoxDecoration(
                             color: const Color(0xFFE8F5E9),
-                            // Light green background
                             borderRadius: BorderRadius.circular(
                               SizeConfig.w(8),
                             ),
-                            // boxShadow: const [
-                            //   BoxShadow(
-                            //     color: Colors.black12,
-                            //     blurRadius: 4,
-                            //     offset: Offset(0, 2),
-                            //   ),
-                            // ],
                           ),
                           constraints: BoxConstraints(
-                            minHeight: SizeConfig.h(80), // Reduced minHeight
+                            minHeight: SizeConfig.h(80),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1379,7 +1414,6 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-
                                   Icon(
                                     Icons.trending_up,
                                     color: Colors.green,
@@ -1392,28 +1426,40 @@ class PhaseTwoInfoWidget extends StatelessWidget {
                                 padding: EdgeInsets.all(5),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(color: Colors.green,width: 2)
+                                  border: Border.all(
+                                    color: Colors.green,
+                                    width: 2,
+                                  ),
                                 ),
                                 child: Text(
-                                  "₹${NumberFormat('#,##,###').format(salesTillNow)}",
+                                  "₹${NumberFormat('#,##,###').format(totalThisYear)}",
                                   style: AppTextStyles.headlineText(
                                     color: Colors.green,
                                   ),
                                 ),
                               ),
-                              // Text(
-                              //   "Annual performance",
-                              //   style: AppTextStyles.captionText(
-                              //     color: Colors.grey,
-                              //   ),
-                              // ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ];
+
+                  if (wide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children,
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      (children[0] as Expanded).child,
+                      SizedBox(height: gap),
+                      (children[2] as Expanded).child,
+                    ],
+                  );
+                },
               ),
             ),
           ],

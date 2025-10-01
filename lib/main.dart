@@ -32,6 +32,7 @@ import 'package:mbindiamy/utils/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'controllers/profile_controller.dart';
+import 'controllers/salesAgentController/currentPhaseController.dart';
 
 void main() async {
   // WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,7 @@ void main() async {
   Get.put(BranchManagerSalesVsPromiseController());
   Get.put(SalesByPhaseController());
   Get.put(PromiseActualController());
+  Get.put(CurrentPhaseController());
   Get.put(TopArticlesController());
   Get.put(FilterController());
   Get.put(CategoryWiseSalesController(apiService: category_api.ApiService()));
