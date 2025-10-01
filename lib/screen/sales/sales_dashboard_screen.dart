@@ -166,18 +166,8 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
           totalSalesController.salesData.value?.totalNetSlsQty ?? 0;
 
       // Get promise vs actual data from PromiseActualController
-      final allDailyValues =
-          (promiseController.data.value?.data.locations ?? [])
-              .expand((location) => location.dailyValues)
-              .map(
-                (dailyValue) => {
-                  "date": dailyValue.date.toString(),
-                  "day": dailyValue.date.day,
-                  "promise": dailyValue.promise,
-                  "actual": dailyValue.actual,
-                },
-              )
-              .toList();
+      // Build a simple list that the last-7-days computation will use
+      final allDailyValues = promiseController.filteredData.toList();
 
       // Get phase data from SalesByPhaseController
       // final phaseData = {
@@ -194,44 +184,28 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
       //       .toDouble(),
       // };
       final now = DateTime.now();
-      final currentYear = now.year;
-      final currentMonth = now.month;
       final salesDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
 
-      // Filter and sort daily values with proper error handling
-      var filteredDailyValues = allDailyValues.where((dv) {
-        try {
-          final dateString = dv["date"] as String;
-          if (dateString.isEmpty) return false;
-          final dt = DateFormat(
-            'd/M',
-          ).parse(dateString); // Use specific format for parsing
-          return dt.year == currentYear && dt.month == currentMonth;
-        } catch (e) {
-          return false;
-        }
-      }).toList();
+      // Last 7 days already computed in controller
+      var filteredDailyValues = allDailyValues;
 
-      final int itemsPerPage = 4;
-      final totalSetsLocal = (filteredDailyValues.length / itemsPerPage).ceil();
+      // No pagination for last 7 days view
+      final totalSetsLocal = 1;
 
       List<Map<String, dynamic>> currentData = [];
       String dateRange = "";
       if (filteredDailyValues.isNotEmpty) {
-        final startIndex = currentSet * itemsPerPage;
-        final endIndex =
-            (startIndex + itemsPerPage < filteredDailyValues.length)
-            ? startIndex + itemsPerPage
-            : filteredDailyValues.length;
-
-        currentData = filteredDailyValues.sublist(startIndex, endIndex).map((
-          dv,
-        ) {
+        currentData = filteredDailyValues.map((dv) {
           try {
             final dateString = dv["date"] as String;
-            final dt = DateFormat(
-              'd/M',
-            ).parse(dateString); // Use specific format for parsing
+            // Dates are already normalized as dd/MM or d/M strings; parse permissively
+            DateTime dt;
+            try {
+              dt = DateFormat('d/M').parse(dateString);
+              dt = DateTime(now.year, dt.month, dt.day);
+            } catch (_) {
+              dt = DateTime.now();
+            }
             final day = [
               'Sun',
               'Mon',
