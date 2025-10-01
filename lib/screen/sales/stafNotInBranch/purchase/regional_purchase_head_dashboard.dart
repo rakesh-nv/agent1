@@ -277,52 +277,51 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
           userName: currentUser!.name,
           userId: userId,
           onNotificationPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Notifications clicked!')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notifications clicked!')),
+            );
           },
         ),
 
         body: RefreshIndicator(
           onRefresh: _loadDashboardData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: SizeConfig.h(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Obx(() {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: SizeConfig.h(16),
+              ),
               children: [
-                Obx(() {
-                  if (!salesComparisonController.hasConnection.value) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.wifi_off, size: SizeConfig.w(60), color: Colors.grey[400]),
-                          SizedBox(height: SizeConfig.h(20)),
-                          Text(
-                            "No Internet Connection",
-                            style: TextStyle(
-                              fontSize: SizeConfig.w(18),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
-                            ),
+                if (!salesComparisonController.hasConnection.value)
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.wifi_off, size: SizeConfig.w(60), color: Colors.grey[400]),
+                        SizedBox(height: SizeConfig.h(20)),
+                        Text(
+                          "No Internet Connection",
+                          style: TextStyle(
+                            fontSize: SizeConfig.w(18),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
                           ),
-                          SizedBox(height: SizeConfig.h(10)),
-                          Text(
-                            "Please check your internet connection and try again.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[500]),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Column(
+                        ),
+                        SizedBox(height: SizeConfig.h(10)),
+                        Text(
+                          "Please check your internet connection and try again.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Reporting To Card
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(SizeConfig.w(10)),
@@ -344,444 +343,48 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
                           );
                         }),
                       ),
-                      // Today's Revenue Card
+
+                      // Today's Revenue / Sell Quantity / Incentive cards
                       Wrap(
                         spacing: SizeConfig.w(6),
                         runSpacing: SizeConfig.h(6),
                         children: [
-                          SizedBox(
-                            width: SizeConfig.isDesktop
-                                ? SizeConfig.w(340)
-                                : SizeConfig.isTablet
-                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
-                                : double.infinity,
-                            child: _infoCard(
-                              "Today's Revenue (Today)",
-                              "₹${totalSalesController.salesData.value?.totalNetAmount ?? "0.0"}",
-                              Icons.currency_rupee,
-                              Colors.green,
-                            ),
+                          _infoCard("Today's Revenue (Today)",
+                            "₹${totalSalesController.salesData.value?.totalNetAmount ?? "0.0"}",
+                            Icons.currency_rupee,
+                            Colors.green,
                           ),
-                          SizedBox(
-                            width: SizeConfig.isDesktop
-                                ? SizeConfig.w(340)
-                                : SizeConfig.isTablet
-                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
-                                : double.infinity,
-                            child: _infoCard(
-                              "Total Sell Quantity  (Today)",
-                              "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
-                              Icons.production_quantity_limits,
-                              Colors.blue,
-                            ),
+                          _infoCard("Total Sell Quantity (Today)",
+                            "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
+                            Icons.production_quantity_limits,
+                            Colors.blue,
                           ),
                           Obx(() {
                             final incentiveValue = totalSalesController.myIncentive.value ?? 0.0;
-                            return SizedBox(
-                              width: SizeConfig.isDesktop
-                                  ? SizeConfig.w(340)
-                                  : SizeConfig.isTablet
-                                  ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
-                                  : double.infinity,
-                              child: _infoCard(
-                                "My Incentive (Today)",
-                                incentiveValue > 0 ? "₹${incentiveValue.toStringAsFixed(2)}" : "₹0",
-                                Icons.currency_rupee,
-                                incentiveValue > 0 ? Colors.purple : Colors.grey,
-                              ),
+                            return _infoCard(
+                              "My Incentive (Today)",
+                              incentiveValue > 0 ? "₹${incentiveValue.toStringAsFixed(2)}" : "₹0",
+                              Icons.currency_rupee,
+                              incentiveValue > 0 ? Colors.purple : Colors.grey,
                             );
                           }),
                         ],
                       ),
+
                       SizedBox(height: SizeConfig.h(16)),
                       _buildSalesComparisonCard(),
                       SizedBox(height: SizeConfig.h(16)),
-                      // // Sales Comparison Card
-                      // _buildSalesComparisonCard(),
-                      // SizedBox(height: SizeConfig.h(16)),
-                      //
-                      // // Category-wise Sales Card
-                      // Obx(() {
-                      //   final salesData =
-                      //       categoryWiseSalesController.salesData.value;
-                      //
-                      //   if (categoryWiseSalesController.isLoading.value) {
-                      //     return Card(
-                      //       shape: RoundedRectangleBorder(
-                      //         borderRadius: BorderRadius.circular(12),
-                      //       ),
-                      //       child: const Padding(
-                      //         padding: EdgeInsets.all(16),
-                      //         child: Center(child: CircularProgressIndicator()),
-                      //       ),
-                      //     );
-                      //   } else if (categoryWiseSalesController
-                      //       .errorMessage
-                      //       .value !=
-                      //       null) {
-                      //     return Card(
-                      //       shape: RoundedRectangleBorder(
-                      //         borderRadius: BorderRadius.circular(12),
-                      //       ),
-                      //       child: Padding(
-                      //         padding: const EdgeInsets.all(16),
-                      //         child: Center(
-                      //           child: Text(
-                      //             "Error: ${categoryWiseSalesController.errorMessage.value}",
-                      //           ),
-                      //         ),
-                      //       ),
-                      //     );
-                      //   } else if (salesData == null ||
-                      //       salesData.data?.categorySales == null ||
-                      //       salesData.data!.categorySales!.isEmpty) {
-                      //     return Card(
-                      //       shape: RoundedRectangleBorder(
-                      //         borderRadius: BorderRadius.circular(12),
-                      //       ),
-                      //       child: const Padding(
-                      //         padding: EdgeInsets.all(16),
-                      //         child: Center(
-                      //           child: Text(
-                      //             "No category-wise sales data available.",
-                      //           ),
-                      //         ),
-                      //       ),
-                      //     );
-                      //   }
-                      //   final totalSalesAmount =
-                      //       salesData.data?.totalSales ?? 0;
-                      //   final categories = salesData.data?.categorySales ?? [];
-                      //   print("gggggggggg");
-                      //   print(categories);
-                      //   return Card(
-                      //     shape: RoundedRectangleBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //     ),
-                      //     child: Padding(
-                      //       padding: EdgeInsets.all(SizeConfig.w(16)),
-                      //       child: Column(
-                      //         crossAxisAlignment: CrossAxisAlignment.start,
-                      //         children: [
-                      //           Row(
-                      //             children: [
-                      //               Icon(
-                      //                 Icons.bar_chart,
-                      //                 size: SizeConfig.w(20),
-                      //                 color: Colors.grey[700],
-                      //               ),
-                      //               SizedBox(width: SizeConfig.w(8)),
-                      //               Text(
-                      //                 "Regional Category Sales",
-                      //                 style: TextStyle(
-                      //                   fontSize: SizeConfig.w(16),
-                      //                   fontWeight: FontWeight.w600,
-                      //                 ),
-                      //               ),
-                      //             ],
-                      //           ),
-                      //           Container(
-                      //             padding: EdgeInsets.symmetric(
-                      //               horizontal: SizeConfig.w(8),
-                      //               vertical: SizeConfig.h(4),
-                      //             ),
-                      //             decoration: BoxDecoration(
-                      //               color: Colors.grey[200],
-                      //               borderRadius: BorderRadius.circular(8),
-                      //             ),
-                      //             child: FittedBox(
-                      //               fit: BoxFit.scaleDown,
-                      //               child: Text(
-                      //                 "Total: ₹${NumberFormat('#,##,###').format(totalSalesAmount)}",
-                      //                 style: TextStyle(
-                      //                   fontSize: SizeConfig.w(12),
-                      //                   color: Colors.grey[700],
-                      //                   fontWeight: FontWeight.w500,
-                      //                 ),
-                      //               ),
-                      //             ),
-                      //           ),
-                      //           SizedBox(height: SizeConfig.h(16)),
-                      //           Row(
-                      //             children: [
-                      //               Icon(
-                      //                 Icons.folder,
-                      //                 size: SizeConfig.w(16),
-                      //                 color: Colors.grey[600],
-                      //               ),
-                      //               SizedBox(width: SizeConfig.w(8)),
-                      //               Text(
-                      //                 "Total Net Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
-                      //                 style: TextStyle(
-                      //                   fontSize: SizeConfig.w(14),
-                      //                   color: Colors.grey[800],
-                      //                 ),
-                      //               ),
-                      //             ],
-                      //           ),
-                      //           SizedBox(height: SizeConfig.h(12)),
-                      //           ListView.builder(
-                      //             shrinkWrap: true,
-                      //             physics: const NeverScrollableScrollPhysics(),
-                      //             itemCount: categories.length,
-                      //             itemBuilder: (context, index) {
-                      //               final category = categories[index];
-                      //               final categoryTotalAmount =
-                      //                   category.totalAmount ?? 0;
-                      //               final percentage = totalSalesAmount > 0
-                      //                   ? (categoryTotalAmount /
-                      //                   totalSalesAmount) *
-                      //                   100
-                      //                   : 0.0;
-                      //               return Padding(
-                      //                 padding: EdgeInsets.only(
-                      //                   bottom: SizeConfig.h(8),
-                      //                 ),
-                      //                 child: Column(
-                      //                   children: [
-                      //                     Row(
-                      //                       mainAxisAlignment:
-                      //                       MainAxisAlignment.spaceBetween,
-                      //                       children: [
-                      //                         Text(
-                      //                           category.category as String,
-                      //                           style: TextStyle(
-                      //                             fontSize: SizeConfig.w(14),
-                      //                           ),
-                      //                         ),
-                      //                         Text(
-                      //                           "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
-                      //                           style: TextStyle(
-                      //                             fontSize: SizeConfig.w(14),
-                      //                             fontWeight: FontWeight.w600,
-                      //                           ),
-                      //                         ),
-                      //                       ],
-                      //                     ),
-                      //                     SizedBox(height: SizeConfig.h(4)),
-                      //                     LinearProgressIndicator(
-                      //                       value: percentage / 100,
-                      //                       backgroundColor: Colors.grey[200],
-                      //                       valueColor:
-                      //                       AlwaysStoppedAnimation<Color>(
-                      //                         Colors.green.shade700,
-                      //                       ),
-                      //                       minHeight: SizeConfig.h(6),
-                      //                       borderRadius: BorderRadius.circular(
-                      //                         3,
-                      //                       ),
-                      //                     ),
-                      //                   ],
-                      //                 ),
-                      //               );
-                      //             },
-                      //           ),
-                      //         ],
-                      //       ),
-                      //     ),
-                      //   );
-                      // }),
-                      // SizedBox(height: SizeConfig.h(16)),
-                      // highestSellingProduct(context),
-                      // // My Branch Performance Card
-                      // // _buildMyBranchPerformanceCard()s,
-                      // SizedBox(height: SizeConfig.h(16)),
-                      // // Promise vs Actual Section
-                      // // _buildPromiseVsActual(),
-                      // SizedBox(height: SizeConfig.h(16)),
-                      // // Customer Analytics Card
-                      // // _buildCustomerAnalyticsCard(),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(SizeConfig.w(10)),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Promise vs Actual",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: SizeConfig.w(14),
-                                  ),
-                                ),
-                                if (filteredDailyValues.isNotEmpty)
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        onPressed: currentSet > 0 ? goPrev : null,
-                                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                                      ),
-                                      Text(dateRange, style: TextStyle(fontSize: SizeConfig.w(10))),
-                                      IconButton(
-                                        onPressed: currentSet < totalSetsLocal - 1 ? goNext : null,
-                                        icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: SizeConfig.h(4)),
-                            Obx(() {
-                              final list = promiseController.filteredData.toList();
-                              return SizedBox(
-                                width: double.infinity,
-                                height: SizeConfig.h(200),
-                                child: list.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          promiseController.isLoading.value
-                                              ? "Loading promise vs actual data..."
-                                              : "No promise vs actual data for this month.",
-                                          style: TextStyle(
-                                            fontSize: SizeConfig.w(16),
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      )
-                                    : ScrollConfiguration(
-                                        behavior: ScrollConfiguration.of(
-                                          context,
-                                        ).copyWith(scrollbars: false),
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: SizeConfig.w(10),
-                                          ),
-                                          itemCount: list.length,
-                                          separatorBuilder: (_, __) =>
-                                              SizedBox(width: SizeConfig.w(10)),
-                                          itemBuilder: (context, index) {
-                                            final item = list[index];
-                                            final percent = item['percent'] as int;
-                                            final color = percent >= 100
-                                                ? Colors.green
-                                                : percent >= 80
-                                                ? Colors.orange
-                                                : Colors.red;
 
-                                            // Reverse index
-                                            final reverseIndex = list.length - index;
+                      // Promise vs Actual
+                      // _buildPromiseVsActualCard(),
 
-                                            return Align(
-                                              alignment: Alignment.center,
-                                              child: Container(
-                                                width: SizeConfig.w(120),
-                                                padding: EdgeInsets.all(SizeConfig.w(6)),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(color: color, width: 2),
-                                                  borderRadius: BorderRadius.circular(14),
-                                                ),
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                                  children: [
-                                                    // Number + Date
-                                                    Text(
-                                                      "$reverseIndex ${item['date']}",
-                                                      style: TextStyle(
-                                                        fontSize: SizeConfig.w(12),
-                                                        fontWeight: FontWeight.w500,
-                                                        color: Colors.blueGrey,
-                                                      ),
-                                                    ),
-                                                    // Promise
-                                                    Column(
-                                                      children: [
-                                                        Text(
-                                                          "Promise",
-                                                          style: TextStyle(
-                                                            color: Colors.grey[700],
-                                                            fontSize: SizeConfig.w(11),
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: SizeConfig.h(1.2)),
-                                                        FittedBox(
-                                                          fit: BoxFit.scaleDown,
-                                                          child: Text(
-                                                            item['promise'] as String,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: SizeConfig.w(14),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    // Actual
-                                                    Column(
-                                                      children: [
-                                                        Text(
-                                                          "Actual",
-                                                          style: TextStyle(
-                                                            color: Colors.grey[700],
-                                                            fontSize: SizeConfig.w(11),
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: SizeConfig.h(1.2)),
-                                                        FittedBox(
-                                                          fit: BoxFit.scaleDown,
-                                                          child: Text(
-                                                            item['actual'] as String,
-                                                            style: TextStyle(
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: SizeConfig.w(14),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    // Percent Indicator
-                                                    Container(
-                                                      padding: EdgeInsets.symmetric(
-                                                        vertical: SizeConfig.h(3.2),
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: color.withOpacity(0.15),
-                                                        borderRadius: BorderRadius.circular(14),
-                                                      ),
-                                                      child: Center(
-                                                        child: Text(
-                                                          "$percent%",
-                                                          style: TextStyle(
-                                                            color: color,
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: SizeConfig.w(14),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
                       SizedBox(height: SizeConfig.h(16)),
                       _buildSubordinatesSalesVsPromiseCard(),
-                      // SubordinatesSalesVsPromiseCard(),
                     ],
-                  );
-                }),
+                  ),
               ],
-            ),
-          ),
+            );
+          }),
         ),
       );
     });

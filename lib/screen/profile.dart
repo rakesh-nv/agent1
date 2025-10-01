@@ -1,8 +1,11 @@
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mbindiamy/style/appTextStyle.dart';
 import 'package:mbindiamy/style/appstyle.dart';
+import 'package:mbindiamy/utils/app_constants.dart';
 import 'package:mbindiamy/widget/appbar_widget.dart';
 import 'package:mbindiamy/widget/navigator_widget.dart';
 import 'package:mbindiamy/controllers/login_controller.dart';
@@ -11,6 +14,7 @@ import 'package:mbindiamy/controllers/reporting_controller.dart';
 import '../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/total_sales_controller.dart';
+import 'package:cupertino_icons/cupertino_icons.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -36,8 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   // String? _selectedBranchId;
 
   final LoginController loginController = Get.find<LoginController>();
-  final ReportingManagerController reportingManagerController =
-      Get.find<ReportingManagerController>();
+  final ReportingManagerController reportingManagerController = Get.find<ReportingManagerController>();
   final SalesComparisonController salesComparisonController =
       Get.find<SalesComparisonController>();
   final TotalSalesController totalSalesController =
@@ -161,25 +164,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.75),
-                          Colors.white.withOpacity(0.6),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, -4),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1.2,
-                      ),
+                      // gradient: LinearGradient(
+                      //   colors: [
+                      //     Colors.white.withOpacity(0.75),
+                      //     Colors.white.withOpacity(0.6),
+                      //   ],
+                      //   begin: Alignment.topLeft,
+                      //   end: Alignment.bottomRight,
+                      // ),
+                      // boxShadow: [
+                      //   BoxShadow(
+                      //     color: Colors.black.withOpacity(0.15),
+                      //     blurRadius: 12,
+                      //     offset: const Offset(0, -4),
+                      //   ),
+                      // ],
+                      // border: Border.all(
+                      //   color: Colors.white.withOpacity(0.3),
+                      //   width: 1.2,
+                      // ),
                     ),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -548,6 +551,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   style: AppStyle.normalTextStyle().copyWith(
                     fontWeight: FontWeight.w600,
                   ),
+
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
@@ -608,14 +612,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         drawer: NavigationDrawerWidget(),
         appBar: CustomAppBar(
           userName: userName,
-          userId: userId,
+          // userId: userId,
+          reportingTo: reportingManagerController.manager.value,
           onNotificationPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Notifications clicked!')),
             );
           },
         ),
-        backgroundColor: AppStyle.backgroundColor,
+        backgroundColor: Colors.white,
         body: CustomScrollView(
           slivers: [
             SliverPadding(
@@ -654,9 +659,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildProfileHeader(context),
-          SizedBox(height: AppStyle.h(4).clamp(16.0, 32.0)),
+          // SizedBox(height: AppStyle.h(4).clamp(16.0, 32.0)),
           _buildPersonalInfo(context),
-          SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
+          // SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
           _buildWorkInfo(context),
           SizedBox(height: AppStyle.h(2.5).clamp(8.0, 16.0)),
         ],
@@ -693,7 +698,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildProfileHeader(BuildContext context) {
     final loginResponse = loginController.loginResponse.value;
     if (loginResponse == null) return const SizedBox.shrink();
-
     return Container(
       margin: EdgeInsets.only(top: AppStyle.h(2).clamp(8.0, 16.0)),
       padding: EdgeInsets.all(AppStyle.w(5).clamp(14.0, 30.0)),
@@ -872,11 +876,23 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Personal Information", style: AppStyle.headTextStyle()),
+            Text("Personal Information", style: AppTextStyles.headlineText()),
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-            infoRow(Icons.person, "Name", loginResponse.data!.user.name),
-            infoRow(Icons.email, "Email", loginResponse.data!.user.email),
-            infoRow(Icons.phone, "Phone", loginResponse.data!.user.mobile),
+            infoRow(
+              CupertinoIcons.person,
+              "Name",
+              loginResponse.data!.user.name,
+            ),
+            infoRow(
+              CupertinoIcons.mail,
+              "Email",
+              loginResponse.data!.user.email,
+            ),
+            infoRow(
+              CupertinoIcons.phone,
+              "Phone",
+              loginResponse.data!.user.mobile,
+            ),
             //infoRow(Icons.badge, "User ID", loginResponse.data.user.id),
           ],
         ),
@@ -886,6 +902,17 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildWorkInfo(BuildContext context) {
     final loginResponse = loginController.loginResponse.value;
+    final user = loginResponse?.data?.user;
+
+    final userId = user == null
+        ? ''
+        : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
+        ? 'All Branches'
+        : (user.selectedBranchAliases.isNotEmpty
+              ? user.selectedBranchAliases.join(
+                  ', ',
+                ) // joins all branches as a string
+              : '');
     if (loginResponse == null) return const SizedBox.shrink();
     String formattedLastLogin = 'Not specified';
     try {
@@ -910,15 +937,24 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Work Information", style: AppStyle.headTextStyle()),
+            Text("Work Information", style: AppTextStyles.headlineText()),
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
-            infoRow(Icons.date_range, "Date of Joining", formattedLastLogin),
             infoRow(
-              Icons.business,
+              CupertinoIcons.calendar,
+              "Date of Joining",
+              formattedLastLogin,
+            ),
+            infoRow(
+              CupertinoIcons.bag,
               "Designation",
               loginResponse.data!.user.userType,
             ),
-            infoRow(Icons.work, "Grade", loginResponse.data!.user.grade),
+            infoRow(
+              CupertinoIcons.person_2_square_stack,
+              "Branch",
+              loginResponse.data!.user.grade,
+            ),
+            infoRow(CupertinoIcons.app_badge, "Grade", userId),
             if (loginResponse.data!.user.userType != 'head')
               infoRow(
                 Icons.person_pin,
@@ -945,7 +981,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Quick Status",
+                      "Quick Stats",
                       style: AppStyle.headTextStyle().copyWith(
                         color: AppStyle.appBarTextColor,
                       ),
@@ -990,6 +1026,7 @@ class _AnimatedButton extends StatefulWidget {
   final VoidCallback? onPressed;
   final Color color;
   final Color textColor;
+
   // final LinearGradient? gradient;
 
   const _AnimatedButton({

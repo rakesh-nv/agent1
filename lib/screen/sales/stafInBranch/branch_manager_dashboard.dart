@@ -143,6 +143,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   void goPrev() => setState(() => currentSet--);
 
   @override
+  @override
   Widget build(BuildContext context) {
     SizeConfig.init(context);
     final horizontalPadding = SizeConfig.isDesktop
@@ -153,9 +154,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     final loginResponse = loginController.loginResponse.value;
     final user = loginResponse?.data?.user;
     String userId =
-        user?.userType?.toLowerCase() == 'head' || user?.isAllBranches == true
+        user?.userType.toLowerCase() == 'head' || user?.isAllBranches == true
         ? 'All Branches'
-        : user?.selectedBranchAliases?.join(', ') ?? '';
+        : user?.selectedBranchAliases.join(', ') ?? '';
 
     final allDailyValues = (promiseController.data.value?.data.locations ?? [])
         .expand((location) => location.dailyValues)
@@ -228,16 +229,21 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       }).toList();
       dateRange = "${currentData.first['date']} - ${currentData.last['date']}";
     }
+    final userName =
+        loginController.loginResponse.value?.data!.user.name ?? "Loading...";
+    final reportingName = reportingController.manager.value ?? "Loading...";
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       drawer: NavigationDrawerWidget(),
       appBar: CustomAppBar(
-        userName: loginResponse?.data?.user.name ?? "Loading...",
-        userId: userId,
-        onNotificationPressed: () => ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Notifications clicked!'))),
+        userName: userName,
+        reportingTo: reportingName,
+        onNotificationPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications clicked!')),
+          );
+        },
       ),
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
@@ -245,7 +251,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
           controller: _mainScrollController,
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
-            vertical: SizeConfig.h(16),
+            vertical: SizeConfig.h(6),
           ),
           child: Obx(() {
             if (!salesComparisonController.hasConnection.value) {
@@ -274,69 +280,261 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               );
             }
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionCard(
-                  "Reporting To: ${reportingController.manager.value ?? 'Loading...'}",
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) => Wrap(
-                    spacing: SizeConfig.w(8),
-                    runSpacing: SizeConfig.h(8),
-                    children: [
-                      Obx(
-                        () => _buildInfoCard(
-                          1,
-                          "Today's Revenue",
-                          "₹${totalSalesController.salesData.value?.totalNetAmount ?? '0.0'}",
-                          Icons.currency_rupee,
-                          Colors.green,
-                        ),
-                      ),
-                      Obx(
-                        () => _buildInfoCard(
-                          1,
-                          "Unit Sold (Today)",
-                          "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
-                          Icons.production_quantity_limits,
-                          Colors.blue,
-                        ),
-                      ),
-                      Obx(
-                        () => _buildInfoCard(
-                          1,
-                          "My Incentive (Today)",
-                          (totalSalesController.myIncentive.value ?? 0.0) > 0
-                              ? "₹${(totalSalesController.myIncentive.value ?? 0.0).toStringAsFixed(2)}"
-                              : "₹0",
-                          Icons.currency_rupee,
-                          (totalSalesController.myIncentive.value ?? 0.0) > 0
-                              ? Colors.purple
-                              : Colors.grey,
-                        ),
-                      ),
-                    ],
+                Obx(
+                  () => _buildInfoCard(
+                    1,
+                    "Today's Revenue",
+                    "₹${totalSalesController.salesData.value?.totalNetAmount ?? '0.0'}",
+                    Icons.currency_rupee,
+                    Colors.green,
                   ),
                 ),
-                SizedBox(height: SizeConfig.h(10)),
+                // Consistent gap
+                Obx(
+                  () => _buildInfoCard(
+                    1,
+                    "Unit Sold (Today)",
+                    "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
+                    Icons.shopping_cart_outlined,
+                    Colors.blue,
+                  ),
+                ),
+                // Consistent gap
+                Obx(
+                  () => _buildInfoCard(
+                    1,
+                    "My Incentive (Today)",
+                    (totalSalesController.myIncentive.value ?? 0.0) > 0
+                        ? "₹${(totalSalesController.myIncentive.value ?? 0.0).toStringAsFixed(2)}"
+                        : "₹0",
+                    Icons.trending_up,
+                    (totalSalesController.myIncentive.value ?? 0.0) > 0
+                        ? Colors.purple
+                        : Colors.grey,
+                  ),
+                ),
+                // Consistent gap
                 _buildSalesComparisonCard(),
-                SizedBox(height: SizeConfig.h(10)),
+                // Consistent gap
                 Obx(() => _buildCategoryWiseSalesCard()),
-                SizedBox(height: SizeConfig.h(10)),
+                // Consistent gap
                 highestSellingProduct(context),
-                SizedBox(height: SizeConfig.h(10)),
+                // Consistent gap
                 _buildPromiseVsActualCard(
                   filteredDailyValues,
                   totalSetsLocal,
                   dateRange,
                 ),
-                SizedBox(height: SizeConfig.h(16)),
+                // Consistent gap
                 _buildSubordinatesSalesVsPromiseCard(),
-                SizedBox(height: SizeConfig.h(16)),
-                _buildArticleWithMrpAndStockCard(),
+                // Consistent gap
+                // _buildArticleWithMrpAndStockCard(),
+                ArticleWithMrpAndStockCard(),
               ],
             );
           }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPromiseVsActualCard(
+    List<Map<String, dynamic>> filteredDailyValues,
+    int totalSetsLocal,
+    String dateRange,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final iconSize = screenWidth < 600
+        ? 18.0
+        : 24.0; // mobile vs tablet/desktop
+
+    return Card(
+      color: Colors.white,
+      elevation: 1,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(SizeConfig.w(8)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(SizeConfig.w(5)),
+          // boxShadow: [
+          //   BoxShadow(
+          //     color: Colors.black12,
+          //     blurRadius: 4,
+          //     offset: const Offset(0, 2),
+          //   ),
+          // ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Promise vs Actual",
+                  style: AppTextStyles.subheadlineText(),
+                ),
+                if (filteredDailyValues.isNotEmpty)
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: currentSet > 0 ? goPrev : null,
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          // size: SizeConfig.w(18),
+                          size: iconSize,
+                        ),
+                      ),
+
+                      IconButton(
+                        onPressed: currentSet < totalSetsLocal - 1
+                            ? goNext
+                            : null,
+                        icon: Icon(Icons.arrow_forward_ios, size: iconSize),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            SizedBox(height: SizeConfig.h(4)),
+            Obx(() {
+              final list = promiseController.filteredData.toList();
+              // Determine if the screen is large (e.g., width > 600 pixels)
+              final isLargeScreen = MediaQuery.of(context).size.height > 600;
+              print("hight" + isLargeScreen.toString());
+              // Set height based on screen size
+              final containerHeight = isLargeScreen
+                  ? MediaQuery.of(context).size.height * 0.2
+                  : MediaQuery.of(context).size.height * 0.5;
+              return SizedBox(
+                // height: SizeConfig.h(180),
+                height: containerHeight,
+                child: list.isEmpty
+                    ? Center(
+                        child: Text(
+                          promiseController.isLoading.value
+                              ? "Loading promise vs actual data..."
+                              : "No promise vs actual data for this month.",
+                          style: AppTextStyles.bodyText(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(
+                          context,
+                        ).copyWith(scrollbars: false),
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: SizeConfig.w(8),
+                          ),
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) =>
+                              SizedBox(width: SizeConfig.w(8)),
+                          itemBuilder: (context, index) {
+                            final item = list[index];
+                            final percent = item['percent'] as int;
+                            final color = percent >= 100
+                                ? Colors.green
+                                : percent >= 80
+                                ? Colors.orange
+                                : Colors.red;
+                            final reverseIndex = list.length - index;
+                            return Container(
+                              width: SizeConfig.w(100),
+                              padding: EdgeInsets.all(SizeConfig.w(6)),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: color, width: 2),
+                                borderRadius: BorderRadius.circular(
+                                  SizeConfig.w(12),
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$reverseIndex ${item['date']}",
+                                    style: AppTextStyles.captionText(
+                                      color: Colors.blueGrey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        "Promise",
+                                        style: AppTextStyles.smallText(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      SizedBox(height: SizeConfig.h(1.2)),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          item['promise'] as String,
+                                          style: AppTextStyles.bodyText(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        "Actual",
+                                        style: AppTextStyles.smallText(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      SizedBox(height: SizeConfig.h(1.2)),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          item['actual'] as String,
+                                          style: AppTextStyles.bodyText(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: SizeConfig.h(3),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: color.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(
+                                        SizeConfig.w(12),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        "$percent%",
+                                        style: AppTextStyles.bodyText(
+                                          color: color,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              );
+            }),
+          ],
         ),
       ),
     );
@@ -350,13 +548,13 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: Colors.black12,
+        //     blurRadius: 4,
+        //     offset: const Offset(0, 2),
+        //   ),
+        // ],
       ),
       child: Text(title, style: AppTextStyles.bodyText()),
     );
@@ -366,22 +564,22 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     double? elevation,
     String title,
     String value,
-    IconData icon,
-    Color iconColor,
+    IconData? icon,
+    Color? iconColor,
   ) {
+    // Determine if the screen is large (e.g., width > 600 pixels)
+    final isLargeScreen = MediaQuery.of(context).size.height > 600;
+    print("height: " + isLargeScreen.toString());
+    // Set icon size based on screen size
+    final iconSize = isLargeScreen
+        ? MediaQuery.of(context).size.height * 0.01
+        : MediaQuery.of(context).size.height * 0.01;
+
     return SizedBox(
-      // width: SizeConfig.isDesktop
-      //     ? SizeConfig.w(300)
-      //     : SizeConfig.isTablet
-      //     ? SizeConfig.w(250)
-      //     : SizeConfig.w(180),
       child: Card(
         elevation: elevation,
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-        ),
-        margin: EdgeInsets.only(bottom: SizeConfig.h(4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         child: Container(
           padding: EdgeInsets.symmetric(
             horizontal: SizeConfig.w(12),
@@ -389,6 +587,21 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
           ),
           child: Row(
             children: [
+              if (icon != null && iconColor != null) ...[
+                Container(
+                  padding: EdgeInsets.all(iconSize),
+                  decoration: BoxDecoration(
+                    color: iconColor,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: MediaQuery.of(context).size.width * .05,
+                  ),
+                ),
+                SizedBox(width: MediaQuery.of(context).size.width * .03),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,14 +625,6 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   ],
                 ),
               ),
-              Container(
-                padding: EdgeInsets.all(SizeConfig.w(10)),
-                decoration: BoxDecoration(
-                  color: iconColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: SizeConfig.w(18)),
-              ),
             ],
           ),
         ),
@@ -427,34 +632,325 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
+  //  Highest Selling Products
+  Widget highestSellingProduct(BuildContext context) {
+    final topArticlesController = Get.find<TopArticlesController>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final isTablet =
+            constraints.maxWidth >= 600 && constraints.maxWidth < 1024;
+        final paddingValue = SizeConfig.w(8); // Base padding
+        final imageSize = MediaQuery.of(context).size.width * .23;
+        final badgeWidth = SizeConfig.w(
+          isMobile
+              ? 50
+              : isTablet
+              ? 60
+              : 70,
+        ); // Scaled badge width
+        final cardHeight = MediaQuery.of(context).size.width * .3;
+
+        return Obx(() {
+          final topArticles =
+              topArticlesController.data.value?.data.take(7).toList() ?? [];
+          return SingleChildScrollView(
+            child: Card(
+              color: Colors.white,
+              elevation: 1,
+              // Matches the elevation used in other cards
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SizeConfig.w(5)),
+              ),
+              margin: EdgeInsets.symmetric(horizontal: SizeConfig.w(4)),
+              child: Padding(
+                padding: EdgeInsets.all(paddingValue),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Highest Selling Products",
+                                maxLines: 2,
+                                style: AppTextStyles.subheadlineText(),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                "(Last 7 Days)",
+                                style: AppTextStyles.captionText(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (topArticles.isNotEmpty)
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () =>
+                                    showPrevious(topArticles.length),
+                                icon: Icon(
+                                  Icons.arrow_back_ios,
+                                  size: SizeConfig.w(isMobile ? 16 : 20),
+                                  color: currentIndex > 0
+                                      ? Colors.black87
+                                      : Colors.grey,
+                                ),
+                                padding: EdgeInsets.all(SizeConfig.w(4)),
+                              ),
+                              Text("${currentIndex + 1}/${7}"),
+                              IconButton(
+                                onPressed: () => showNext(topArticles.length),
+                                icon: Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: SizeConfig.w(isMobile ? 16 : 20),
+                                  color: currentIndex < topArticles.length - 1
+                                      ? Colors.black87
+                                      : Colors.grey,
+                                ),
+                                padding: EdgeInsets.all(SizeConfig.w(4)),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: SizeConfig.h(8)),
+                    SizedBox(
+                      height: cardHeight,
+                      child: topArticles.isEmpty
+                          ? Center(
+                              child: Text(
+                                topArticlesController.isLoading.value
+                                    ? "Loading top articles..."
+                                    : "No top articles data available",
+                                style: AppTextStyles.bodyText(
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : PageView.builder(
+                              controller: _pageController,
+                              itemCount: topArticles.length,
+                              onPageChanged: (index) =>
+                                  setState(() => currentIndex = index),
+                              itemBuilder: (context, index) =>
+                                  _buildProductCard(
+                                    context: context,
+                                    article: topArticles[index],
+                                    imageSize: imageSize,
+                                    paddingValue: paddingValue,
+                                    badgeWidth: badgeWidth,
+                                  ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _buildProductCard({
+    required BuildContext context,
+    required TopArticleData.ArticleData article,
+    required double imageSize,
+    required double paddingValue,
+    required double badgeWidth,
+  }) {
+    final gpValue = article.gp;
+    final formattedGp = gpValue.toStringAsFixed(2);
+    final isMobile =
+        SizeConfig.screenWidth <
+        600; // Check screen width for additional responsiveness
+    final hasImage =
+        article.img.isNotEmpty; // Check image once and store result
+
+    return Container(
+      padding: EdgeInsets.all(paddingValue / (isMobile ? 1.5 : 1.2)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(SizeConfig.w(12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: imageSize,
+            height: imageSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(SizeConfig.w(8)),
+            ),
+            child: hasImage
+                ? _buildNetworkImage(article.img, imageSize)
+                : _buildPlaceholderIcon(size: imageSize),
+          ),
+          SizedBox(width: SizeConfig.w(isMobile ? 8 : 12)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: MediaQuery.of(context).size.height * .01,
+              children: [
+                Text(
+                  article.articleNo ?? 'N/A',
+                  maxLines: 2,
+                  style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Amount: ₹${article.netAmount.toStringAsFixed(2)}",
+                      style: AppTextStyles.bodyText(),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          "Qty: ${article.netQuantity}",
+                          style: AppTextStyles.bodyText(color: Colors.grey),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(width: SizeConfig.w(10)),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: SizeConfig.w(8),
+                            vertical: SizeConfig.h(4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getGpColor(gpValue),
+                            borderRadius: BorderRadius.circular(
+                              SizeConfig.w(8),
+                            ),
+                          ),
+                          constraints: BoxConstraints(minWidth: badgeWidth),
+                          child: Text(
+                            "GP: $formattedGp%",
+                            style: AppTextStyles.smallText(
+                              color: _getGpTextColor(gpValue),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(
+              left: SizeConfig.w(8),
+              top: SizeConfig.h(4),
+            ),
+            child: Icon(
+              Icons.trending_up,
+              color: _getTrendingColor(gpValue),
+              size: SizeConfig.w(isMobile ? 20 : 24),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getGpColor(double gpValue) => Colors.green.withOpacity(0.2);
+
+  Color _getGpTextColor(double gpValue) => Colors.green[800]!;
+
+  Color _getTrendingColor(double gpValue) => Colors.green;
+
+  Widget _buildNetworkImage(String imageUrl, double size) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(SizeConfig.w(8)),
+      child: Image.network(
+        imageUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : Center(
+                child: CircularProgressIndicator(
+                  value: progress.expectedTotalBytes != null
+                      ? progress.cumulativeBytesLoaded /
+                            progress.expectedTotalBytes!
+                      : null,
+                  strokeWidth: 2.0, // Consistent thickness
+                ),
+              ),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderIcon(size: size),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderIcon({double size = 50}) {
+    return Container(
+      width: size,
+      height: size,
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(Icons.image, size: size * 0.5, color: Colors.grey),
+      ),
+    );
+  }
+
   Widget _buildSalesComparisonCard() {
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       child: Padding(
         padding: EdgeInsets.all(SizeConfig.w(12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: SizeConfig.w(18),
-                  color: Colors.grey[600],
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: SizeConfig.w(18),
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: SizeConfig.w(8)),
+                    Text(
+                      "Sales Comparison",
+                      style: AppTextStyles.subheadlineText(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: SizeConfig.w(8)),
-                Text(
-                  "Sales Comparison",
-                  style: AppTextStyles.subheadlineText(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                // Container(
+                //   padding: EdgeInsets.symmetric(
+                //     horizontal: SizeConfig.w(8),
+                //     vertical: SizeConfig.h(4),
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: Colors.grey[200],
+                //     borderRadius: BorderRadius.circular(5),
+                //   ),
+                //   child: Text(
+                //     "Limited Access",
+                //     style: AppTextStyles.captionText(color: Colors.grey),
+                //   ),
+                // ),
               ],
             ),
-            SizedBox(height: SizeConfig.h(16)),
+            // SizedBox(height: SizeConfig.h(16)),
             Obx(() {
               final todaySales =
                   (salesComparisonController.todaySalesData.value ?? 0)
@@ -489,41 +985,49 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           0,
                           "Today's Sales",
                           "₹${todaySales.toStringAsFixed(0)}",
-                          Icons.currency_rupee,
-                          Colors.blue,
+                          null, // Keep the icon
+                          null, // Keep the icon color
                         ),
                       ),
-                      SizedBox(width: SizeConfig.w(12)),
                       Expanded(
                         child: _buildInfoCard(
                           0,
                           "Yesterday's Sales",
                           "₹${yesterdaySales.toStringAsFixed(0)}",
-                          Icons.currency_rupee,
-                          Colors.orange,
+                          null, // Icon is optional, passing null
+                          null, // Icon color is optional, passing null
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: SizeConfig.h(12)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        trendIcon,
-                        color: trendColor,
-                        size: SizeConfig.w(18),
-                      ),
-                      SizedBox(width: SizeConfig.w(8)),
-                      Text(
-                        trendText,
-                        style: AppTextStyles.bodyText(
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig.w(8),
+                      vertical: SizeConfig.h(4),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          trendIcon,
                           color: trendColor,
-                          fontWeight: FontWeight.w500,
+                          size: SizeConfig.w(18),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        SizedBox(width: SizeConfig.w(5)),
+                        Text(
+                          trendText,
+                          style: AppTextStyles.bodyText(
+                            color: trendColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
@@ -551,9 +1055,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     final categories = salesData.data?.categorySales ?? [];
     return Card(
       color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       child: Padding(
         padding: EdgeInsets.all(SizeConfig.w(12)),
         child: Column(
@@ -592,7 +1094,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 ),
               ],
             ),
-            SizedBox(height: SizeConfig.h(16)),
+
             Row(
               children: [
                 Icon(
@@ -603,7 +1105,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 SizedBox(width: SizeConfig.w(8)),
                 Flexible(
                   child: Text(
-                    "Total Net Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
+                    "Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
                     style: AppTextStyles.bodyText(color: Colors.grey),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -667,501 +1169,41 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  Widget highestSellingProduct(BuildContext context) {
-    final topArticlesController = Get.find<TopArticlesController>();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        final isTablet =
-            constraints.maxWidth >= 600 && constraints.maxWidth < 1024;
-        final paddingValue = SizeConfig.w(8); // Base padding
-        final imageSize = SizeConfig.w(
-          isMobile
-              ? 80
-              : isTablet
-              ? 100
-              : 120,
-        ); // Scaled image size
-        final badgeWidth = SizeConfig.w(
-          isMobile
-              ? 50
-              : isTablet
-              ? 60
-              : 70,
-        ); // Scaled badge width
-        final cardHeight = SizeConfig.h(
-          isMobile
-              ? 140
-              : isTablet
-              ? 160
-              : 180,
-        ); // Scaled card height
-
-        return Obx(() {
-          final topArticles = topArticlesController.data.value?.data ?? [];
-          return Container(
-            padding: EdgeInsets.all(paddingValue),
-            margin: EdgeInsets.symmetric(vertical: SizeConfig.h(8)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: SizeConfig.w(6), // Responsive shadow blur
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Highest Selling Products",
-                            maxLines: 2,
-                            style: AppTextStyles.subheadlineText(),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            "(Last 7 Days)",
-                            style: AppTextStyles.captionText(
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (topArticles.isNotEmpty)
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => showPrevious(topArticles.length),
-                            icon: Icon(
-                              Icons.arrow_back_ios,
-                              size: SizeConfig.w(isMobile ? 16 : 20),
-                              // Responsive icon size
-                              color: currentIndex > 0
-                                  ? Colors.black87
-                                  : Colors.grey,
-                            ),
-                            padding: EdgeInsets.all(SizeConfig.w(4)),
-                          ),
-                          IconButton(
-                            onPressed: () => showNext(topArticles.length),
-                            icon: Icon(
-                              Icons.arrow_forward_ios,
-                              size: SizeConfig.w(isMobile ? 16 : 20),
-                              // Responsive icon size
-                              color: currentIndex < topArticles.length - 1
-                                  ? Colors.black87
-                                  : Colors.grey,
-                            ),
-                            padding: EdgeInsets.all(SizeConfig.w(4)),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                SizedBox(height: SizeConfig.h(8)),
-                SizedBox(
-                  // height: 200,
-                  height: cardHeight,
-                  child: topArticles.isEmpty
-                      ? Center(
-                          child: Text(
-                            topArticlesController.isLoading.value
-                                ? "Loading top articles..."
-                                : "No top articles data available",
-                            style: AppTextStyles.bodyText(color: Colors.grey),
-                            textAlign: TextAlign
-                                .center, // Centered for better visibility
-                          ),
-                        )
-                      : PageView.builder(
-                          controller: _pageController,
-                          itemCount: topArticles.length,
-                          onPageChanged: (index) =>
-                              setState(() => currentIndex = index),
-                          itemBuilder: (context, index) => _buildProductCard(
-                            context: context,
-                            article: topArticles[index],
-                            imageSize: imageSize,
-                            paddingValue: paddingValue,
-                            badgeWidth: badgeWidth,
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  Widget _buildProductCard({
-    required BuildContext context,
-    required TopArticleData.ArticleData article,
-    required double imageSize,
-    required double paddingValue,
-    required double badgeWidth,
-  }) {
-    final gpValue = article.gp;
-    final formattedGp = gpValue.toStringAsFixed(2);
-    final isMobile =
-        SizeConfig.screenWidth <
-        600; // Check screen width for additional responsiveness
-
-    return Container(
-      padding: EdgeInsets.all(paddingValue / (isMobile ? 1.5 : 1.2)),
-      // Slightly less padding on larger screens
-      margin: EdgeInsets.symmetric(horizontal: SizeConfig.w(4)),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6E8),
-        borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: imageSize,
-            height: imageSize,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(SizeConfig.w(8)),
-            ),
-            child: article.img.isNotEmpty
-                ? _buildNetworkImage(article.img, imageSize)
-                : _buildPlaceholderIcon(size: imageSize),
-          ),
-          SizedBox(width: SizeConfig.w(isMobile ? 8 : 12)),
-          // Wider gap on larger screens
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  article.articleNo ?? 'N/A',
-                  maxLines: 2,
-                  style: AppTextStyles.subheadlineText(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: SizeConfig.h(isMobile ? 6 : 8)),
-                // Adjusted spacing
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Amount: ₹${article.netAmount.toStringAsFixed(2)}",
-                      style: AppTextStyles.bodyText(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      "Qty: ${article.netQuantity}",
-                      style: AppTextStyles.bodyText(color: Colors.grey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-                // SizedBox(height: SizeConfig.h(isMobile ? 6 : 8)),
-                // Adjusted spacing
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: SizeConfig.w(8),
-                    vertical: SizeConfig.h(4),
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getGpColor(gpValue),
-                    borderRadius: BorderRadius.circular(SizeConfig.w(8)),
-                  ),
-                  constraints: BoxConstraints(minWidth: badgeWidth),
-                  child: Text(
-                    "GP: $formattedGp%",
-                    style: AppTextStyles.bodyText(
-                      color: _getGpTextColor(gpValue),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: SizeConfig.w(8),
-              top: SizeConfig.h(4),
-            ),
-            child: Icon(
-              Icons.trending_up,
-              color: _getTrendingColor(gpValue),
-              size: SizeConfig.w(isMobile ? 20 : 24), // Responsive icon size
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getGpColor(double gpValue) => Colors.green.withOpacity(0.2);
-
-  Color _getGpTextColor(double gpValue) => Colors.green[800]!;
-
-  Color _getTrendingColor(double gpValue) => Colors.green;
-
-  Widget _buildNetworkImage(String imageUrl, double size) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(SizeConfig.w(8)),
-      child: Image.network(
-        imageUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) => progress == null
-            ? child
-            : Center(
-                child: CircularProgressIndicator(
-                  value: progress.expectedTotalBytes != null
-                      ? progress.cumulativeBytesLoaded /
-                            progress.expectedTotalBytes!
-                      : null,
-                  strokeWidth: 2.0, // Consistent thickness
-                ),
-              ),
-        errorBuilder: (context, error, stackTrace) =>
-            _buildPlaceholderIcon(size: size),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderIcon({double size = 50}) {
-    return Container(
-      width: size,
-      height: size,
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(Icons.image, size: size * 0.5, color: Colors.grey),
-      ),
-    );
-  }
-
-  Widget _buildPromiseVsActualCard(
-    List<Map<String, dynamic>> filteredDailyValues,
-    int totalSetsLocal,
-    String dateRange,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(SizeConfig.w(8)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Promise vs Actual", style: AppTextStyles.subheadlineText()),
-              if (filteredDailyValues.isNotEmpty)
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: currentSet > 0 ? goPrev : null,
-                      icon: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: SizeConfig.w(18),
-                      ),
-                    ),
-                    Text(dateRange, style: AppTextStyles.captionText()),
-                    IconButton(
-                      onPressed: currentSet < totalSetsLocal - 1
-                          ? goNext
-                          : null,
-                      icon: Icon(
-                        Icons.arrow_forward_ios,
-                        size: SizeConfig.w(18),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          SizedBox(height: SizeConfig.h(4)),
-          Obx(() {
-            final list = promiseController.filteredData.toList();
-            return SizedBox(
-              // height: SizeConfig.h(180),
-              height: 180,
-              child: list.isEmpty
-                  ? Center(
-                      child: Text(
-                        promiseController.isLoading.value
-                            ? "Loading promise vs actual data..."
-                            : "No promise vs actual data for this month.",
-                        style: AppTextStyles.bodyText(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    )
-                  : ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(
-                        context,
-                      ).copyWith(scrollbars: false),
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: SizeConfig.w(8),
-                        ),
-                        itemCount: list.length,
-                        separatorBuilder: (_, __) =>
-                            SizedBox(width: SizeConfig.w(8)),
-                        itemBuilder: (context, index) {
-                          final item = list[index];
-                          final percent = item['percent'] as int;
-                          final color = percent >= 100
-                              ? Colors.green
-                              : percent >= 80
-                              ? Colors.orange
-                              : Colors.red;
-                          final reverseIndex = list.length - index;
-                          return Container(
-                            width: SizeConfig.w(100),
-                            padding: EdgeInsets.all(SizeConfig.w(6)),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: color, width: 2),
-                              borderRadius: BorderRadius.circular(
-                                SizeConfig.w(12),
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "$reverseIndex ${item['date']}",
-                                  style: AppTextStyles.captionText(
-                                    color: Colors.blueGrey,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Column(
-                                  children: [
-                                    Text(
-                                      "Promise",
-                                      style: AppTextStyles.smallText(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    SizedBox(height: SizeConfig.h(1.2)),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        item['promise'] as String,
-                                        style: AppTextStyles.bodyText(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Column(
-                                  children: [
-                                    Text(
-                                      "Actual",
-                                      style: AppTextStyles.smallText(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    SizedBox(height: SizeConfig.h(1.2)),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        item['actual'] as String,
-                                        style: AppTextStyles.bodyText(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: SizeConfig.h(3),
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: color.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(
-                                      SizeConfig.w(12),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      "$percent%",
-                                      style: AppTextStyles.bodyText(
-                                        color: color,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSubordinatesSalesVsPromiseCard() {
     return Obx(() {
-      if (subordinatesSalesVsPromiseController.isLoading.value)
-        return _buildLoadingCard();
-      if (subordinatesSalesVsPromiseController.errorMessage.value != null)
-        return _buildErrorCard(
-          subordinatesSalesVsPromiseController.errorMessage.value.toString(),
+      if (subordinatesSalesVsPromiseController.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      } else if (subordinatesSalesVsPromiseController.errorMessage.value !=
+          null) {
+        return Center(
+          child: Text(
+            "Error: ${subordinatesSalesVsPromiseController.errorMessage.value}",
+          ),
         );
+      } else if (subordinatesSalesVsPromiseController
+              .subordinatesSalesVsPromiseData
+              .value
+              ?.data ==
+          null) {
+        return const SizedBox.shrink(); // show nothing if no data
+      }
+
       final data = subordinatesSalesVsPromiseController
           .subordinatesSalesVsPromiseData
-          .value
-          ?.data;
-      if (data == null ||
-          data.subordinates == null ||
-          data.subordinates!.isEmpty)
-        return const SizedBox.shrink();
+          .value!
+          .data!;
+      final subordinates = data.subordinates;
 
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-        ),
+      if (subordinates == null || subordinates.isEmpty) {
+        return const SizedBox.shrink(); // 🔹 don't show anything
+      }
+
+      return Card(
+        color: Colors.white,
+        // margin: EdgeInsets.symmetric(vertical: SizeConfig.h(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         child: Padding(
-          padding: EdgeInsets.all(SizeConfig.w(12)),
+          padding: EdgeInsets.all(SizeConfig.w(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1169,13 +1211,15 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 "Subordinates Sales vs Promise",
                 style: AppTextStyles.subheadlineText(),
               ),
-              SizedBox(height: SizeConfig.h(12)),
+
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: data.subordinates!.length,
-                itemBuilder: (context, index) =>
-                    _buildSubordinateTile(data.subordinates![index]),
+                itemCount: subordinates.length,
+                itemBuilder: (context, index) {
+                  final subordinate = subordinates[index];
+                  return _buildSubordinateTile(subordinate);
+                },
               ),
             ],
           ),
@@ -1190,42 +1234,47 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     final percentage = totalPromise > 0
         ? (totalSales / totalPromise) * 100
         : 0.0;
-    final progressColor = percentage >= 80
-        ? Colors.green
-        : percentage >= 50
-        ? Colors.orange
-        : Colors.red;
+    Color progressColor = Colors.grey;
+    if (percentage >= 80) {
+      progressColor = Colors.green;
+    } else if (percentage >= 50) {
+      progressColor = Colors.orange;
+    } else {
+      progressColor = Colors.red;
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: SizeConfig.h(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.all(SizeConfig.w(12)),
+            padding: EdgeInsets.all(SizeConfig.w(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   subordinate.name ?? 'N/A',
-                  style: AppTextStyles.subheadlineText(),
-                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(16),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(4)),
                 Text(
                   "Email: ${subordinate.email ?? 'N/A'}",
-                  style: AppTextStyles.captionText(color: Colors.grey),
-                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(12),
+                    color: Colors.grey[600],
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(8)),
                 Text(
                   "Total Sales: ₹${NumberFormat('#,##,###').format(totalSales)}",
-                  style: AppTextStyles.bodyText(),
-                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: SizeConfig.w(14)),
                 ),
                 Text(
                   "Total Promise: ₹${NumberFormat('#,##,###').format(totalPromise)}",
-                  style: AppTextStyles.bodyText(),
-                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: SizeConfig.w(14)),
                 ),
                 SizedBox(height: SizeConfig.h(8)),
                 LinearProgressIndicator(
@@ -1233,16 +1282,17 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   backgroundColor: Colors.grey[200],
                   valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   minHeight: SizeConfig.h(8),
-                  borderRadius: BorderRadius.circular(SizeConfig.w(4)),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 SizedBox(height: SizeConfig.h(4)),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
                     "${percentage.toStringAsFixed(1)}% achieved",
-                    style: AppTextStyles.captionText(
-                      color: progressColor,
+                    style: TextStyle(
+                      fontSize: SizeConfig.w(12),
                       fontWeight: FontWeight.bold,
+                      color: progressColor,
                     ),
                   ),
                 ),
@@ -1250,13 +1300,16 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(12)),
+            padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   "Branches:",
-                  style: AppTextStyles.bodyText(fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 ListView.builder(
                   shrinkWrap: true,
@@ -1264,19 +1317,22 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   itemCount: subordinate.branches?.length ?? 0,
                   itemBuilder: (context, idx) {
                     final branch = subordinate.branches![idx];
-                    final branchPromise = branch.promised ?? 0;
-                    final branchActualSales = branch.actualSales ?? 0;
-                    final branchPercentage = branchPromise > 0
+                    final num branchPromise = branch.promised ?? 0;
+                    final num branchActualSales = branch.actualSales ?? 0;
+                    final double branchPercentage = branchPromise > 0
                         ? (branchActualSales / branchPromise) * 100
                         : 0.0;
-                    final branchProgressColor = branchPercentage >= 80
-                        ? Colors.green
-                        : branchPercentage >= 50
-                        ? Colors.orange
-                        : Colors.red;
+                    Color branchProgressColor = Colors.grey;
+                    if (branchPercentage >= 80) {
+                      branchProgressColor = Colors.green;
+                    } else if (branchPercentage >= 50) {
+                      branchProgressColor = Colors.orange;
+                    } else {
+                      branchProgressColor = Colors.red;
+                    }
                     return Padding(
                       padding: EdgeInsets.only(
-                        left: SizeConfig.w(12),
+                        left: SizeConfig.w(16),
                         top: SizeConfig.h(4),
                       ),
                       child: Column(
@@ -1284,8 +1340,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                         children: [
                           Text(
                             "${branch.branchAlias}: ₹${NumberFormat('#,##,###').format(branchActualSales)} / ₹${NumberFormat('#,##,###').format(branchPromise)}",
-                            style: AppTextStyles.bodyText(),
-                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: SizeConfig.w(12)),
                           ),
                           LinearProgressIndicator(
                             value: branchPercentage / 100,
@@ -1294,15 +1349,14 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                               branchProgressColor,
                             ),
                             minHeight: SizeConfig.h(6),
-                            borderRadius: BorderRadius.circular(
-                              SizeConfig.w(3),
-                            ),
+                            borderRadius: BorderRadius.circular(3),
                           ),
                           Align(
                             alignment: Alignment.centerRight,
                             child: Text(
                               "${branchPercentage.toStringAsFixed(1)}%",
-                              style: AppTextStyles.captionText(
+                              style: TextStyle(
+                                fontSize: SizeConfig.w(10),
                                 color: branchProgressColor,
                               ),
                             ),
@@ -1312,7 +1366,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                     );
                   },
                 ),
-                Divider(height: SizeConfig.h(20)),
+                Divider(height: SizeConfig.h(24)),
               ],
             ),
           ),
@@ -1321,111 +1375,110 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  Widget _buildArticleWithMrpAndStockCard() {
-    return Obx(() {
-      if (articleController.isLoading.value) return _buildLoadingCard();
-      if (articleController.errorMessage.value.isNotEmpty)
-        return _buildErrorCard(articleController.errorMessage.value);
-      final articles = articleController.articles.take(5).toList();
-      if (articles.isEmpty) return _buildEmptyCard("No articles available.");
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(SizeConfig.w(12)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(SizeConfig.w(12)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Articles with MRP and Stock",
-                style: AppTextStyles.subheadlineText(),
-              ),
-              SizedBox(height: SizeConfig.h(12)),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
-                  child: DataTable(
-                    columnSpacing: SizeConfig.w(8),
-                    dataRowHeight: SizeConfig.h(40),
-                    headingRowHeight: SizeConfig.h(30),
-                    horizontalMargin: SizeConfig.w(6),
-                    // headingRowColor: MaterialStateProperty.all(
-                    //   Colors.grey[200],
-                    // ),
-                    columns: [
-                      _buildTableHeader("Article ID", flex: 1),
-                      _buildTableHeader("Category", flex: 2),
-                      _buildTableHeader("Price", flex: 1),
-                      _buildTableHeader("Stock", flex: 1),
-                    ],
-                    rows: articles
-                        .map(
-                          (article) => DataRow(
-                            cells: [
-                              DataCell(
-                                Text(
-                                  article.articleNo ?? 'N/A',
-                                  style: AppTextStyles.bodyText(),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  article.category ?? 'N/A',
-                                  style: AppTextStyles.bodyText(
-                                    color: Colors.blue,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
-                                  style: AppTextStyles.bodyText(),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  "${article.stockQty ?? 0}",
-                                  style: AppTextStyles.bodyText(),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    });
-  }
-
-  DataColumn _buildTableHeader(String text, {int flex = 1}) {
-    return DataColumn(
-      label: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          text,
-          style: AppTextStyles.subheadlineText(fontWeight: FontWeight.bold),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-      ),
-    );
-  }
+  // Widget _buildArticleWithMrpAndStockCard() {
+  //   return Obx(() {
+  //     if (articleController.isLoading.value) return _buildLoadingCard();
+  //     if (articleController.errorMessage.value.isNotEmpty)
+  //       return _buildErrorCard(articleController.errorMessage.value);
+  //     final articles = articleController.articles.take(5).toList();
+  //     if (articles.isEmpty) return _buildEmptyCard("No articles available.");
+  //     return Card(
+  //       color: Colors.white,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+  //
+  //       child: Padding(
+  //         padding: EdgeInsets.all(SizeConfig.w(12)),
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text(
+  //               "Articles with MRP and Stock",
+  //               style: AppTextStyles.subheadlineText(),
+  //             ),
+  //             SizedBox(height: SizeConfig.h(12)),
+  //             SingleChildScrollView(
+  //               scrollDirection: Axis.horizontal,
+  //               child: ConstrainedBox(
+  //                 constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
+  //                 child: DataTable(
+  //                   columnSpacing: SizeConfig.w(8),
+  //                   dataRowHeight: SizeConfig.h(40),
+  //                   headingRowHeight: SizeConfig.h(30),
+  //                   horizontalMargin: SizeConfig.w(6),
+  //                   // headingRowColor: MaterialStateProperty.all(
+  //                   //   Colors.grey[200],
+  //                   // ),
+  //                   columns: [
+  //                     _buildTableHeader("Article ID", flex: 1),
+  //                     _buildTableHeader("Category", flex: 2),
+  //                     _buildTableHeader("Price", flex: 1),
+  //                     _buildTableHeader("Stock", flex: 1),
+  //                   ],
+  //                   rows: articles
+  //                       .map(
+  //                         (article) => DataRow(
+  //                           cells: [
+  //                             DataCell(
+  //                               Text(
+  //                                 article.articleNo ?? 'N/A',
+  //                                 style: AppTextStyles.bodyText(),
+  //                                 overflow: TextOverflow.ellipsis,
+  //                                 maxLines: 1,
+  //                               ),
+  //                             ),
+  //                             DataCell(
+  //                               Text(
+  //                                 article.category ?? 'N/A',
+  //                                 style: AppTextStyles.bodyText(
+  //                                   color: Colors.blue,
+  //                                 ),
+  //                                 overflow: TextOverflow.ellipsis,
+  //                                 maxLines: 1,
+  //                               ),
+  //                             ),
+  //                             DataCell(
+  //                               Text(
+  //                                 "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
+  //                                 style: AppTextStyles.bodyText(),
+  //                                 overflow: TextOverflow.ellipsis,
+  //                                 maxLines: 1,
+  //                               ),
+  //                             ),
+  //                             DataCell(
+  //                               Text(
+  //                                 "${article.stockQty ?? 0}",
+  //                                 style: AppTextStyles.bodyText(),
+  //                                 overflow: TextOverflow.ellipsis,
+  //                                 maxLines: 1,
+  //                               ),
+  //                             ),
+  //                           ],
+  //                         ),
+  //                       )
+  //                       .toList(),
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     );
+  //   });
+  // }
+  //
+  // DataColumn _buildTableHeader(String text, {int flex = 1}) {
+  //   return DataColumn(
+  //     label: FittedBox(
+  //       fit: BoxFit.scaleDown,
+  //       child: Text(
+  //         text,
+  //         style: AppTextStyles.subheadlineText(fontWeight: FontWeight.bold),
+  //         overflow: TextOverflow.ellipsis,
+  //         maxLines: 1,
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildLoadingCard() => Card(
     shape: RoundedRectangleBorder(
@@ -1477,6 +1530,233 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             maxLines: 3, // Allow multiple lines for longer messages
           ),
         ),
+      ),
+    );
+  }
+}
+
+class ArticleWithMrpAndStockCard extends StatelessWidget {
+  final ArticleController articleController = Get.find<ArticleController>();
+  final TextEditingController _searchController = TextEditingController();
+  final RxString _searchQuery = ''.obs;
+
+  ArticleWithMrpAndStockCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildArticleWithMrpAndStockCard();
+  }
+
+  Widget _buildArticleWithMrpAndStockCard() {
+    return Obx(() {
+      if (articleController.isLoading.value) return _buildLoadingCard();
+      if (articleController.errorMessage.value.isNotEmpty)
+        return _buildErrorCard(articleController.errorMessage.value);
+
+      // Filter articles based on search query
+      final allArticles = articleController.articles
+          .where(
+            (article) =>
+                article.articleNo?.toLowerCase().contains(
+                  _searchQuery.value.toLowerCase(),
+                ) ??
+                false ||
+                    article.category!.toLowerCase().contains(
+                      _searchQuery.value.toLowerCase(),
+                    ) ??
+                false,
+          )
+          .toList();
+
+      // Limit to 10 articles for display
+      final displayArticles = allArticles.take(10).toList();
+
+      if (allArticles.isEmpty && _searchQuery.value.isEmpty)
+        return _buildEmptyCard("No articles available.");
+      if (allArticles.isEmpty)
+        return _buildEmptyCard("No articles match your search.");
+
+      // Calculate total price and total stock for all filtered articles
+      final totalPrice = allArticles.fold<double>(
+        0.0,
+        (sum, article) => sum + (article.itemMRP ?? 0.0),
+      );
+      final totalStock = allArticles.fold<int>(
+        0,
+        (sum, article) => sum + (article.stockQty ?? 0),
+      );
+
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        child: Padding(
+          padding: EdgeInsets.all(SizeConfig.w(12)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Row(
+                children: [
+                  Icon(Icons.search, size: SizeConfig.w(20)),
+                  Text(
+                    "Articles with MRP and Stock",
+                    style: AppTextStyles.subheadlineText(),
+                  ),
+                ],
+              ),
+              SizedBox(height: SizeConfig.h(12)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Total Price: ₹${totalPrice.toStringAsFixed(2)}",
+                    style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "Total Stock: $totalStock",
+                    style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              // Search Bar
+              SizedBox(
+                height: 40,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by Article ID or Category',
+                    prefixIcon: Icon(Icons.search, size: SizeConfig.w(16)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: SizeConfig.h(3),
+                      horizontal: SizeConfig.w(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    hintStyle: AppTextStyles.bodyText(),
+                  ),
+                  style: AppTextStyles.bodyText(),
+                  onChanged: (value) {
+                    _searchQuery.value = value;
+                  },
+                ),
+              ),
+              SizedBox(height: SizeConfig.h(12)),
+              // Table
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
+                  child: DataTable(
+                    columnSpacing: SizeConfig.w(8),
+                    dataRowHeight: SizeConfig.h(40),
+                    headingRowHeight: SizeConfig.h(30),
+                    horizontalMargin: SizeConfig.w(6),
+                    columns: [
+                      _buildTableHeader("Article ID", flex: 1),
+                      _buildTableHeader("Category", flex: 2),
+                      _buildTableHeader("Price", flex: 1),
+                      _buildTableHeader("Stock", flex: 1),
+                    ],
+                    rows: displayArticles
+                        .map(
+                          (article) => DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  article.articleNo ?? 'N/A',
+                                  style: AppTextStyles.bodyText(),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  article.category ?? 'N/A',
+                                  style: AppTextStyles.bodyText(
+                                    color: Colors.blue,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
+                                  style: AppTextStyles.bodyText(),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  "${article.stockQty ?? 0}",
+                                  style: AppTextStyles.bodyText(),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+              // Total Price and Stock
+              SizedBox(height: SizeConfig.h(12)),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  DataColumn _buildTableHeader(String text, {int flex = 1}) {
+    return DataColumn(
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          style: AppTextStyles.subheadlineText(fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(SizeConfig.w(12)),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(String errorMessage) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(SizeConfig.w(12)),
+        child: Center(
+          child: Text(errorMessage, style: AppTextStyles.bodyText()),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyCard(String message) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(SizeConfig.w(12)),
+        child: Center(child: Text(message, style: AppTextStyles.bodyText())),
       ),
     );
   }

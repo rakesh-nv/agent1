@@ -57,9 +57,7 @@ class _BranchWiseSalesScreen123State extends State<BranchWiseSalesScreen123> {
   }
 
   Future<void> _fetchSalesData() async {
-    final from =
-        selectedStartDate.value ??
-        DateTime.now().subtract(const Duration(days: 30));
+    final from = selectedStartDate.value ?? DateTime.now().subtract(const Duration(days: 30));
     final to = selectedEndDate.value ?? DateTime.now();
     final branch = selectedBranches.isEmpty
         ? 'all'

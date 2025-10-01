@@ -151,7 +151,8 @@ class NavigationDrawerWidget extends StatelessWidget {
               Get.offAll(() => const BusinessHeadDashboard());
               break;
             case "Grade 2":
-              Get.offAll(() => const RegionalPurchaseHeadDashboard());
+              // Get.offAll(() => const RegionalPurchaseHeadDashboard());
+              Get.offAll(() => const RegionalManagerDashboard());
               break;
             case "Grade 3":
               Get.offAll(() => const BranchManagerDashboard());

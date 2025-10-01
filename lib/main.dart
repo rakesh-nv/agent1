@@ -25,6 +25,7 @@ import 'package:mbindiamy/screen/sales/sales_dashboard_screen.dart';
 import 'package:mbindiamy/screen/login.dart';
 import 'package:mbindiamy/screen/sales/stafInBranch/branch_manager_dashboard.dart';
 import 'package:mbindiamy/screen/sales/stafNotInBranch/purchase/regional_purchase_head_dashboard.dart';
+import 'package:mbindiamy/screen/sales/stafNotInBranch/regional_manager_dashboard.dart';
 
 import 'package:mbindiamy/style/appstyle.dart';
 import 'package:mbindiamy/utils/app_constants.dart';
@@ -124,7 +125,8 @@ class _LauncherScreenState extends State<LauncherScreen> {
             // Purchase Head
             // Regional Purchase Head
             // Area/Cluster Head
-            Get.offAll(() => const RegionalPurchaseHeadDashboard());
+            // Get.offAll(() => const RegionalPurchaseHeadDashboard());
+            Get.offAll(() => RegionalManagerDashboard());
             break;
           case "Grade 3":
             // Branch Manager

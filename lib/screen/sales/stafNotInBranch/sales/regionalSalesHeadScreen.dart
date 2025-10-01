@@ -3,25 +3,25 @@ import 'package:flutter/cupertino.dart';
 import 'package:mbindiamy/widget/custom_drawer.dart';
 
 // Utility class for responsive sizing
-class SizeConfig {
-  static late double screenWidth;
-  static late double screenHeight;
-  static late bool isMobile;
-  static late bool isTablet;
-  static late bool isDesktop;
-
-  static void init(BuildContext context) {
-    screenWidth = MediaQuery.of(context).size.width;
-    screenHeight = MediaQuery.of(context).size.height;
-    isMobile = screenWidth < 600;
-    isTablet = screenWidth >= 600 && screenWidth < 1024;
-    isDesktop = screenWidth >= 1024;
-  }
-
-  static double w(double width) => screenWidth * (width / 375);
-
-  static double h(double height) => screenHeight * (height / 812);
-}
+// class SizeConfig {
+//   static late double screenWidth;
+//   static late double screenHeight;
+//   static late bool isMobile;
+//   static late bool isTablet;
+//   static late bool isDesktop;
+//
+//   static void init(BuildContext context) {
+//     screenWidth = MediaQuery.of(context).size.width;
+//     screenHeight = MediaQuery.of(context).size.height;
+//     isMobile = screenWidth < 600;
+//     isTablet = screenWidth >= 600 && screenWidth < 1024;
+//     isDesktop = screenWidth >= 1024;
+//   }
+//
+//   static double w(double width) => screenWidth * (width / 375);
+//
+//   static double h(double height) => screenHeight * (height / 812);
+// }
 
 class RegionalSalesHeadScreen extends StatefulWidget {
   const RegionalSalesHeadScreen({super.key});

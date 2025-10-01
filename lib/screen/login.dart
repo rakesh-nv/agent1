@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mbindiamy/screen/sales/sales_dashboard_screen.dart';
 import 'package:mbindiamy/screen/sales/stafInBranch/branch_manager_dashboard.dart';
 import 'package:mbindiamy/screen/sales/stafNotInBranch/purchase/regional_purchase_head_dashboard.dart';
+import 'package:mbindiamy/screen/sales/stafNotInBranch/regional_manager_dashboard.dart';
 import 'package:mbindiamy/style/appstyle.dart';
 import 'package:get/get.dart';
 import 'package:mbindiamy/controllers/login_controller.dart';
@@ -87,45 +88,46 @@ class _LoginScreenState extends State<LoginScreen> {
       print(userGrade);
       switch (userGrade) {
         case "Grade 1":
-        // Business Head (CEO)
+          // Business Head (CEO)
           Get.offAll(() => BusinessHeadDashboard());
           break;
         case "Grade 2":
-        // Sales Head
-        // Purchase Head
-        // Regional Purchase Head
-        // Area/Cluster Head
-          Get.offAll(() => const RegionalPurchaseHeadDashboard());
+          // Sales Head
+          // Purchase Head
+          // Regional Purchase Head
+          // Area/Cluster Head
+          //   Get.offAll(() => const RegionalPurchaseHeadDashboard());
+          Get.offAll(() => const RegionalManagerDashboard());
           break;
         case "Grade 3":
-        // Branch Manager
-        // Billing Manager
-        // Sales Coordinator
-        // Purchase Coordinator
+          // Branch Manager
+          // Billing Manager
+          // Sales Coordinator
+          // Purchase Coordinator
           Get.offAll(() => const BranchManagerDashboard());
           break;
         case "Grade 4":
-        // Sales Agent
-        // Purchase Coordinator
+          // Sales Agent
+          // Purchase Coordinator
           Get.offAll(() => SalesAgentDashBoard());
           break;
         case "Grade 5":
-        // Sales Agent
-        // Purchase Coordinator
+          // Sales Agent
+          // Purchase Coordinator
           Get.offAll(() => SalesAgentDashBoard());
           break;
         case "Grade 6":
-        // Sales Agent
-        // Purchase Coordinator
+          // Sales Agent
+          // Purchase Coordinator
           Get.offAll(() => SalesAgentDashBoard());
           break;
         case "Grade 7":
-        // Sales Agent
-        // Purchase Coordinator
+          // Sales Agent
+          // Purchase Coordinator
           Get.offAll(() => SalesAgentDashBoard());
           break;
         default:
-        //  If no matching grade found → go to Login
+          //  If no matching grade found → go to Login
           Get.offAll(() => const LoginScreen());
       }
       // Get.offAll(() => const DashboardScreen());
@@ -158,13 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Card(
-                  elevation: 4,
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppStyle.w(12)),
-                  ),
-                  child: Padding(
+                 Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: padding,
                       vertical: spacing * 2,
@@ -260,7 +256,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     }),
                   ),
-                ),
               ],
             ),
           ),

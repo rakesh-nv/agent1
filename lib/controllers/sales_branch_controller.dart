@@ -25,6 +25,7 @@ class SalesbranchController extends GetxController {
     // Initial data fetch can be triggered here if needed, e.g.,
     // fetchData(startDate: DateTime.now(), endDate: DateTime.now(), branch: 'all');
   }
+
   Future<void> fetchData({
     required DateTime startDate,
     required DateTime endDate,
@@ -88,7 +89,9 @@ class SalesbranchController extends GetxController {
             branch: branch,
             // token: token,
           );
+
           _logger.d("Promise API Response: ${promiseResponse.value?.toJson()}");
+
           if (!promiseResponse.value!.success) {
             errorMessage.value = promiseResponse.value!.message;
           } else {
@@ -182,10 +185,10 @@ class SalesbranchController extends GetxController {
   }
 
   PromiseActualResponse _applyFilterAggregationPromise(
-      PromiseActualResponse response,
-      DateTime startDate,
-      DateTime endDate,
-      ) {
+    PromiseActualResponse response,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
     final filteredLocations = response.data.locations.where((loc) {
       // Assuming Location has a date field that can be compared
       // This part needs adjustment based on the actual structure of `Location`.
@@ -209,10 +212,10 @@ class SalesbranchController extends GetxController {
   }
 
   SalesByBranchCategoryResponse _applyFilterAggregationSales(
-      SalesByBranchCategoryResponse response,
-      DateTime startDate,
-      DateTime endDate,
-      ) {
+    SalesByBranchCategoryResponse response,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
     final filteredBranchSales = response.data.branchSales.where((sale) {
       // Assuming BranchSales has a date field that can be compared
       // This part needs adjustment based on the actual structure of `BranchSales`.
@@ -222,11 +225,11 @@ class SalesbranchController extends GetxController {
 
     final totalSales = filteredBranchSales.fold(
       0.0,
-          (sum, item) => sum + item.totalAmount,
+      (sum, item) => sum + item.totalAmount,
     );
     final totalNetSlsQty = filteredBranchSales.fold(
       0,
-          (sum, item) => sum + item.totalNetSlsQty,
+      (sum, item) => sum + item.totalNetSlsQty,
     );
 
     return SalesByBranchCategoryResponse(

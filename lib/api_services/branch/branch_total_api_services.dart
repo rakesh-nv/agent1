@@ -118,4 +118,39 @@ class SalesApiService {
       rethrow;
     }
   }
-}
+
+  Future<SalesDataResponse> fetchThisYearsSales() async {
+    try {
+      final box = Hive.box('myBox');
+      final token = box.get(AppConstants.keyToken) ?? '';
+      print("//////" + token);
+      if (token.isEmpty) {
+        throw Exception("Auth token not found. Please login first.");
+      }
+      final now = DateTime.now();
+      final currentYear = now.year;
+      final formattedToday = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final requestBody = jsonEncode({
+        "from": "$currentYear-04-01",
+        "to": formattedToday
+      });
+      debugPrint('Requesting this year\'s sales with body: $requestBody');
+
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {"Content-Type": "application/json", "Authorization": token},
+        body: requestBody,
+      );
+      debugPrint('API Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return SalesDataResponse.fromJson(jsonData);
+      } else {
+        throw Exception('API Error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching this year\'s sales: $e');
+      rethrow;
+    }
+  }}
