@@ -4,21 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/BranchManagerSalesVsPromiseController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
+import 'package:mbindiamy/controllers/subordinates_aggregation_controller.dart';
 import 'package:mbindiamy/controllers/total_sales_controller.dart'
     show TotalSalesController;
 import 'package:mbindiamy/style/appstyle.dart';
 import 'package:mbindiamy/widget/appbar_widget.dart';
 import 'package:get/get.dart';
-import '../../../branch/stafInBranch/billingManager.dart';
 import '../../../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../../../controllers/login_controller.dart';
 import '../../../controllers/promise_actual_controller.dart';
 import '../../../controllers/reporting_controller.dart';
 import '../../../controllers/subordinates_sales_vs_promise_controller.dart';
 import '../../../controllers/top_articles_controller.dart';
-import '../../../model/subordinates_sales_vs_promise_model.dart';
+import '../../../model/subordinates_sales_vs_promise_model.dart' as SalesModel;
+import '../../../model/subordinates_aggregation_model.dart' as AggModel;
 import '../../../model/top_artical_model.dart' as TopArticleData;
 import '../../../style/appTextStyle.dart';
+import '../../../style/siseConfig.dart';
 import '../../../widget/navigator_widget.dart';
 import '../../../controllers/ArticleWithMrpAndStockController.dart';
 import '../../../model/ArticlesWithMrpAndStock_model.dart'
@@ -35,6 +37,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   int currentSet = 0;
   int currentIndex = 0;
   final PageController _pageController = PageController();
+  final PageController _pageController1 = PageController();
   final ScrollController _mainScrollController = ScrollController();
   final LoginController loginController = Get.find<LoginController>();
   final ReportingManagerController reportingController =
@@ -52,6 +55,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       Get.find<BranchManagerSalesVsPromiseController>();
   final SubordinatesSalesVsPromiseController
   subordinatesSalesVsPromiseController = Get.find();
+  final SubordinatesAggregationController subordinatesAggregationController =
+      Get.find<SubordinatesAggregationController>();
   final PromiseActualController promiseController =
       Get.find<PromiseActualController>();
   final ArticleController articleController = Get.find<ArticleController>();
@@ -93,6 +98,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             .catchError(
               (e) => debugPrint("fetchSubordinatesSalesVsPromise error"),
             ),
+        subordinatesAggregationController
+            .fetchSubordinatesAggregation()
+            .catchError((e) => debugPrint("loadPromiseActualData error")),
         promiseController.loadPromiseActualData().catchError(
           (e) => debugPrint("loadPromiseActualData error"),
         ),
@@ -141,8 +149,17 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   void goNext() => setState(() => currentSet++);
 
   void goPrev() => setState(() => currentSet--);
+  int currentIncentiveIndex = 0;
 
-  @override
+  void switchIncentivePage(int index) {
+    setState(() {
+      currentIncentiveIndex = index;
+      _pageController1.jumpToPage(
+        index,
+      ); // Sync the PageController with the new index
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     SizeConfig.init(context);
@@ -163,7 +180,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         .map(
           (dv) => {
             "date": dv.date.toString(),
-            "day": dv.date.day,
+            "day": DateTime.parse(dv.date.toString()).day,
             "promise": dv.promise,
             "actual": dv.actual,
           },
@@ -285,7 +302,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   () => _buildInfoCard(
                     1,
                     "Today's Revenue",
-                    "₹${totalSalesController.salesData.value?.totalNetAmount ?? '0.0'}",
+                    "₹${NumberFormat('#,##,###').format(totalSalesController.salesData.value?.totalNetAmount) ?? '0.0'}",
                     Icons.currency_rupee,
                     Colors.green,
                   ),
@@ -306,7 +323,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                     1,
                     "My Incentive (Today)",
                     (totalSalesController.myIncentive.value ?? 0.0) > 0
-                        ? "₹${(totalSalesController.myIncentive.value ?? 0.0).toStringAsFixed(2)}"
+                        ? "₹${(NumberFormat('#,##,###').format(totalSalesController.myIncentive.value))}"
                         : "₹0",
                     Icons.trending_up,
                     (totalSalesController.myIncentive.value ?? 0.0) > 0
@@ -327,7 +344,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   dateRange,
                 ),
                 // Consistent gap
-                _buildSubordinatesSalesVsPromiseCard(),
+                // _buildSubordinatesSalesVsPromiseCard(),
+                _buildIncentiveDashboardCard(),
                 // Consistent gap
                 // _buildArticleWithMrpAndStockCard(),
                 ArticleWithMrpAndStockCard(),
@@ -459,7 +477,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "$reverseIndex ${item['date']}",
+                                    "${item['date']}",
                                     style: AppTextStyles.captionText(
                                       color: Colors.blueGrey,
                                       fontWeight: FontWeight.w500,
@@ -798,7 +816,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: MediaQuery.of(context).size.height * .01,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   article.articleNo ?? 'N/A',
@@ -806,6 +824,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
+                SizedBox(height: MediaQuery.of(context).size.height * .01),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1228,7 +1247,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     });
   }
 
-  Widget _buildSubordinateTile(Subordinate subordinate) {
+  Widget _buildSubordinateTile(SalesModel.Subordinate subordinate) {
     final totalSales = subordinate.totalSales ?? 0;
     final totalPromise = subordinate.totalPromise ?? 0;
     final percentage = totalPromise > 0
@@ -1375,110 +1394,368 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  // Widget _buildArticleWithMrpAndStockCard() {
-  //   return Obx(() {
-  //     if (articleController.isLoading.value) return _buildLoadingCard();
-  //     if (articleController.errorMessage.value.isNotEmpty)
-  //       return _buildErrorCard(articleController.errorMessage.value);
-  //     final articles = articleController.articles.take(5).toList();
-  //     if (articles.isEmpty) return _buildEmptyCard("No articles available.");
-  //     return Card(
-  //       color: Colors.white,
-  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-  //
-  //       child: Padding(
-  //         padding: EdgeInsets.all(SizeConfig.w(12)),
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               "Articles with MRP and Stock",
-  //               style: AppTextStyles.subheadlineText(),
-  //             ),
-  //             SizedBox(height: SizeConfig.h(12)),
-  //             SingleChildScrollView(
-  //               scrollDirection: Axis.horizontal,
-  //               child: ConstrainedBox(
-  //                 constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
-  //                 child: DataTable(
-  //                   columnSpacing: SizeConfig.w(8),
-  //                   dataRowHeight: SizeConfig.h(40),
-  //                   headingRowHeight: SizeConfig.h(30),
-  //                   horizontalMargin: SizeConfig.w(6),
-  //                   // headingRowColor: MaterialStateProperty.all(
-  //                   //   Colors.grey[200],
-  //                   // ),
-  //                   columns: [
-  //                     _buildTableHeader("Article ID", flex: 1),
-  //                     _buildTableHeader("Category", flex: 2),
-  //                     _buildTableHeader("Price", flex: 1),
-  //                     _buildTableHeader("Stock", flex: 1),
-  //                   ],
-  //                   rows: articles
-  //                       .map(
-  //                         (article) => DataRow(
-  //                           cells: [
-  //                             DataCell(
-  //                               Text(
-  //                                 article.articleNo ?? 'N/A',
-  //                                 style: AppTextStyles.bodyText(),
-  //                                 overflow: TextOverflow.ellipsis,
-  //                                 maxLines: 1,
-  //                               ),
-  //                             ),
-  //                             DataCell(
-  //                               Text(
-  //                                 article.category ?? 'N/A',
-  //                                 style: AppTextStyles.bodyText(
-  //                                   color: Colors.blue,
-  //                                 ),
-  //                                 overflow: TextOverflow.ellipsis,
-  //                                 maxLines: 1,
-  //                               ),
-  //                             ),
-  //                             DataCell(
-  //                               Text(
-  //                                 "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
-  //                                 style: AppTextStyles.bodyText(),
-  //                                 overflow: TextOverflow.ellipsis,
-  //                                 maxLines: 1,
-  //                               ),
-  //                             ),
-  //                             DataCell(
-  //                               Text(
-  //                                 "${article.stockQty ?? 0}",
-  //                                 style: AppTextStyles.bodyText(),
-  //                                 overflow: TextOverflow.ellipsis,
-  //                                 maxLines: 1,
-  //                               ),
-  //                             ),
-  //                           ],
-  //                         ),
-  //                       )
-  //                       .toList(),
-  //                 ),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     );
-  //   });
-  // }
-  //
-  // DataColumn _buildTableHeader(String text, {int flex = 1}) {
-  //   return DataColumn(
-  //     label: FittedBox(
-  //       fit: BoxFit.scaleDown,
-  //       child: Text(
-  //         text,
-  //         style: AppTextStyles.subheadlineText(fontWeight: FontWeight.bold),
-  //         overflow: TextOverflow.ellipsis,
-  //         maxLines: 1,
-  //       ),
-  //     ),
-  //   );
-  // }
+  Widget _buildIncentiveDashboardCard() {
+    return Obx(() {
+      if (subordinatesAggregationController.isLoading.value ||
+          totalSalesController.isLoading.value) {
+        return _buildLoadingCard();
+      } else if (subordinatesAggregationController.errorMessage.value != null ||
+          totalSalesController.errorMessage.value != null) {
+        return _buildErrorCard(
+          "${subordinatesAggregationController.errorMessage.value ?? ''}${totalSalesController.errorMessage.value ?? ''}",
+        );
+      }
+
+      final myIncentive = totalSalesController.myIncentive.value ?? 0.0;
+      final target = 35000.0; // Example target value
+      final achievementPercentage = (myIncentive / target) * 100;
+      final remaining = target - myIncentive;
+
+      final data =
+          subordinatesAggregationController.subordinatesResponse.value?.data;
+      final List<AggModel.Subordinate> subordinates = data?.subordinates ?? [];
+      final sortedSubordinates =
+          subordinates
+              .where(
+                (subordinate) =>
+                    subordinate.sales?.totalSales?.totalAmount != null,
+              )
+              .toList()
+            ..sort(
+              (a, b) => (b.sales!.totalSales!.totalAmount).compareTo(
+                a.sales!.totalSales!.totalAmount,
+              ),
+            );
+      final teamRank =
+          sortedSubordinates.indexWhere(
+            (sub) => sub.sales!.totalSales!.totalAmount == myIncentive.toInt(),
+          ) +
+          1;
+
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        elevation: 1,
+        child: DefaultTabController(
+          length: 2, // Two tabs: My Incentives and Team Leaderboard
+          initialIndex: 0, // Start with My Incentives
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(SizeConfig.w(12)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Incentive Dashboard",
+                      style: AppTextStyles.subheadlineText(),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: SizeConfig.w(8),
+                        vertical: SizeConfig.h(4),
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green[100],
+                        borderRadius: BorderRadius.circular(SizeConfig.w(8)),
+                      ),
+                      child: Text(
+                        "Live Updates",
+                        style: AppTextStyles.captionText(color: Colors.green),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  color: Colors.grey[200],
+                  child: TabBar(
+                    dividerHeight: 0,
+                    labelColor: Colors.blue[700],
+                    unselectedLabelColor: Colors.grey[600],
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    labelPadding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig.w(16),
+                      vertical: SizeConfig.h(8),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig.w(10),
+                      vertical: SizeConfig.h(4),
+                    ),
+                    tabs: [
+                      Text("My Incentives", style: AppTextStyles.bodyText()),
+                      Text("Team Leaderboard", style: AppTextStyles.bodyText()),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: SizeConfig.h(400), // Adjustable height for the tab view
+                child: TabBarView(
+                  children: [
+                    _buildMyIncentivesView(
+                      myIncentive,
+                      target,
+                      achievementPercentage,
+                      remaining,
+                      teamRank,
+                    ),
+                    _buildTeamLeaderboardView(sortedSubordinates),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildMyIncentivesView(
+    double myIncentive,
+    double target,
+    double achievementPercentage,
+    double remaining,
+    int teamRank,
+  ) {
+    return Padding(
+      padding: EdgeInsets.all(SizeConfig.w(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.monetization_on,
+                        color: Colors.green[700],
+                        size: SizeConfig.w(20),
+                      ),
+                      SizedBox(width: SizeConfig.w(8)),
+                      Text(
+                        "This Month",
+                        style: AppTextStyles.captionText(color: Colors.green),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: SizeConfig.h(4)),
+                  Text(
+                    "₹${NumberFormat("#,##,###").format(myIncentive)}",
+                    style: AppTextStyles.subheadlineText(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.arrow_back,
+                        color: Colors.blue[700],
+                        size: SizeConfig.w(20),
+                      ),
+                      SizedBox(width: SizeConfig.w(8)),
+                      Text(
+                        "Target",
+                        style: AppTextStyles.captionText(color: Colors.blue),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: SizeConfig.h(4)),
+                  Text(
+                    "₹${target.toStringAsFixed(0)}",
+                    style: AppTextStyles.subheadlineText(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: SizeConfig.h(16)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.emoji_events,
+                        color: Colors.orange[700],
+                        size: SizeConfig.w(20),
+                      ),
+                      SizedBox(width: SizeConfig.w(8)),
+                      Text(
+                        "Achievement",
+                        style: AppTextStyles.captionText(color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: SizeConfig.h(4)),
+                  Text(
+                    "${achievementPercentage.toStringAsFixed(1)}%",
+                    style: AppTextStyles.subheadlineText(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     Row(
+              //       children: [
+              //         Icon(
+              //           Icons.people,
+              //           color: Colors.green[700],
+              //           size: SizeConfig.w(20),
+              //         ),
+              //         SizedBox(width: SizeConfig.w(8)),
+              //         Text(
+              //           "Team Rank",
+              //           style: AppTextStyles.captionText(color: Colors.green),
+              //         ),
+              //       ],
+              //     ),
+              //     SizedBox(height: SizeConfig.h(4)),
+              //     Text(
+              //       teamRank > 0 ? "#$teamRank" : "Unranked",
+              //       style: AppTextStyles.subheadlineText(
+              //         fontWeight: FontWeight.bold,
+              //       ),
+              //     ),
+              //   ],
+              // ),
+            ],
+          ),
+          SizedBox(height: SizeConfig.h(16)),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+
+              borderRadius: BorderRadius.circular(5),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(10)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Progress to Target",
+                  style: AppTextStyles.bodyText(fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: SizeConfig.h(8)),
+                LinearProgressIndicator(
+                  value: achievementPercentage / 100,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
+                  minHeight: SizeConfig.h(10),
+                  borderRadius: BorderRadius.circular(SizeConfig.w(5)),
+                ),
+                SizedBox(height: SizeConfig.h(8)),
+                Text(
+                  "Remaining: ₹${remaining.toStringAsFixed(0)} to reach target",
+                  style: AppTextStyles.captionText(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamLeaderboardView(
+    List<AggModel.Subordinate> sortedSubordinates,
+  ) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: sortedSubordinates.length,
+            itemBuilder: (context, index) {
+              final subordinate = sortedSubordinates[index];
+              final rank = index + 1;
+              final sales = subordinate.sales.totalSales.totalAmount ?? 0;
+              final incentive = _calculateIncentive(sales.toDouble());
+
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    // color: rank <= 3 ? Colors.green[50] : Colors.transparent,
+                    borderRadius: BorderRadius.circular(SizeConfig.w(5)),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: rank == 1
+                          ? Colors.yellow[700]
+                          : rank == 2
+                          ? Colors.grey[400]
+                          : rank == 3
+                          ? Colors.brown[400]
+                          : Colors.transparent,
+                      child: Text(
+                        '#$rank',
+                        style: TextStyle(
+                          color: rank <= 3 ? Colors.black : Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      subordinate.name ?? 'N/A',
+                      style: AppTextStyles.bodyText(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Sales: ₹${NumberFormat('#,##,###').format(sales)}',
+                      style: AppTextStyles.bodyText(color: Colors.grey),
+                    ),
+                    trailing: Text(
+                      '₹${incentive.toStringAsFixed(0)} Incentive',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _calculateIncentive(double sales) {
+    // Example logic: Adjust to match your incentive structure
+    double incentive = sales * 0.1; // 10% of sales as a starting point
+    // if (incentive < 500) return 500;
+    // if (incentive > 12000) return 12000;
+    return incentive;
+  }
 
   Widget _buildLoadingCard() => Card(
     shape: RoundedRectangleBorder(

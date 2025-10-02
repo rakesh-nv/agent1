@@ -50,14 +50,20 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
   final PageController _pageController = PageController();
   final ScrollController _mainScrollController = ScrollController();
   final LoginController loginController = Get.find<LoginController>();
-  final ReportingManagerController reportingController = Get.find<ReportingManagerController>();
-  final TotalSalesController totalSalesController = Get.find<TotalSalesController>();
-  final SalesComparisonController salesComparisonController = Get.find<SalesComparisonController>();
+  final ReportingManagerController reportingController =
+      Get.find<ReportingManagerController>();
+  final TotalSalesController totalSalesController =
+      Get.find<TotalSalesController>();
+  final SalesComparisonController salesComparisonController =
+      Get.find<SalesComparisonController>();
   final CategoryWiseSalesController categoryWiseSalesController =
       Get.find<CategoryWiseSalesController>();
-  final TopArticlesController topArticlesController = Get.find<TopArticlesController>();
-  final SubordinatesSalesVsPromiseController subordinatesSalesVsPromiseController = Get.find();
-  final PromiseActualController promiseController = Get.find<PromiseActualController>();
+  final TopArticlesController topArticlesController =
+      Get.find<TopArticlesController>();
+  final SubordinatesSalesVsPromiseController
+  subordinatesSalesVsPromiseController = Get.find();
+  final PromiseActualController promiseController =
+      Get.find<PromiseActualController>();
 
   @override
   void initState() {
@@ -95,16 +101,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
         topArticlesController.loadTopArticles().catchError((e) {
           debugPrint("loadTopArticles error");
         }),
-        subordinatesSalesVsPromiseController.fetchSubordinatesSalesVsPromise().catchError((e) {
-          debugPrint("Subordinates Sales vs Promise error: $e");
-        }),
+        subordinatesSalesVsPromiseController
+            .fetchSubordinatesSalesVsPromise()
+            .catchError((e) {
+              debugPrint("Subordinates Sales vs Promise error: $e");
+            }),
       ]);
       debugPrint("Refresh: All dashboard data loaded successfully");
     } catch (e) {
       debugPrint("Refresh: Error in _loadDashboardData: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading dashboard data: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading dashboard data: $e')),
+      );
     }
   }
 
@@ -119,7 +127,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
     if (currentIndex < length - 1) {
       setState(() {
         currentIndex++;
-        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeIn,
+        );
       });
     }
   }
@@ -165,17 +176,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
       }
 
       // Get promise vs actual data from PromiseActualController
-      final allDailyValues = (promiseController.data.value?.data.locations ?? [])
-          .expand((location) => location.dailyValues)
-          .map(
-            (dailyValue) => {
-              "date": dailyValue.date.toString(),
-              "day": dailyValue.date.day,
-              "promise": dailyValue.promise,
-              "actual": dailyValue.actual,
-            },
-          )
-          .toList();
+      final allDailyValues =
+          (promiseController.data.value?.data.locations ?? [])
+              .expand((location) => location.dailyValues)
+              .map(
+                (dailyValue) => {
+                  "date": dailyValue.date.toString(),
+                  "day": DateTime.parse(dailyValue.date.toString()).day,
+                  "promise": dailyValue.promise,
+                  "actual": dailyValue.actual,
+                },
+              )
+              .toList();
 
       final now = DateTime.now();
       final currentYear = now.year;
@@ -186,7 +198,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
         try {
           final dateString = dv["date"] as String;
           if (dateString.isEmpty) return false;
-          final dt = DateFormat('d/M').parse(dateString); // Use specific format for parsing
+          final dt = DateFormat(
+            'd/M',
+          ).parse(dateString); // Use specific format for parsing
           return dt.year == currentYear && dt.month == currentMonth;
         } catch (e) {
           return false;
@@ -214,19 +228,34 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
       String dateRange = "";
       if (filteredDailyValues.isNotEmpty) {
         final startIndex = currentSet * itemsPerPage;
-        final endIndex = (startIndex + itemsPerPage < filteredDailyValues.length)
+        final endIndex =
+            (startIndex + itemsPerPage < filteredDailyValues.length)
             ? startIndex + itemsPerPage
             : filteredDailyValues.length;
 
-        currentData = filteredDailyValues.sublist(startIndex, endIndex).map((dv) {
+        currentData = filteredDailyValues.sublist(startIndex, endIndex).map((
+          dv,
+        ) {
           try {
             final dateString = dv["date"] as String;
-            final dt = DateFormat('d/M').parse(dateString); // Use specific format for parsing
-            final day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.weekday % 7];
+            final dt = DateFormat(
+              'd/M',
+            ).parse(dateString); // Use specific format for parsing
+            final day = [
+              'Sun',
+              'Mon',
+              'Tue',
+              'Wed',
+              'Thu',
+              'Fri',
+              'Sat',
+            ][dt.weekday % 7];
             final dateStr = "${dt.day}/${dt.month}";
             final promise = (dv["promise"] as num).toDouble();
             final actual = (dv["actual"] as num).toDouble();
-            final percent = promise > 0 ? ((actual / promise) * 100).round() : 0;
+            final percent = promise > 0
+                ? ((actual / promise) * 100).round()
+                : 0;
             return {
               "day": day,
               "date": dateStr,
@@ -235,12 +264,19 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               "percent": percent,
             };
           } catch (e) {
-            return {"day": 'N/A', "date": 'N/A', "promise": '0.00', "actual": '0.00', "percent": 0};
+            return {
+              "day": 'N/A',
+              "date": 'N/A',
+              "promise": '0.00',
+              "actual": '0.00',
+              "percent": 0,
+            };
           }
         }).toList();
 
         if (currentData.isNotEmpty) {
-          dateRange = "${currentData.first['date']} - ${currentData.last['date']}";
+          dateRange =
+              "${currentData.first['date']} - ${currentData.last['date']}";
         }
       }
 
@@ -249,10 +285,13 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
       final user = loginResponse?.data?.user;
       final userId = user == null
           ? ''
-          : (user.userType.toLowerCase() == 'head' || user.isAllBranches == true)
+          : (user.userType.toLowerCase() == 'head' ||
+                user.isAllBranches == true)
           ? 'All Branches'
           : (user.selectedBranchAliases.isNotEmpty
-                ? user.selectedBranchAliases.join(', ') // joins all branches as a string
+                ? user.selectedBranchAliases.join(
+                    ', ',
+                  ) // joins all branches as a string
                 : '');
 
       return Scaffold(
@@ -263,9 +302,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
           userId: userId,
           // reportingTo: currentUser.reportingTo,
           onNotificationPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Notifications clicked!')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notifications clicked!')),
+            );
           },
         ),
         body: RefreshIndicator(
@@ -285,7 +324,11 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.wifi_off, size: SizeConfig.w(60), color: Colors.grey[400]),
+                          Icon(
+                            Icons.wifi_off,
+                            size: SizeConfig.w(60),
+                            color: Colors.grey[400],
+                          ),
                           SizedBox(height: SizeConfig.h(20)),
                           Text(
                             "No Internet Connection",
@@ -299,7 +342,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           Text(
                             "Please check your internet connection and try again.",
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[500]),
+                            style: TextStyle(
+                              fontSize: SizeConfig.w(14),
+                              color: Colors.grey[500],
+                            ),
                           ),
                         ],
                       ),
@@ -333,7 +379,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             width: SizeConfig.isDesktop
                                 ? SizeConfig.w(340)
                                 : SizeConfig.isTablet
-                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
+                                ? (SizeConfig.screenWidth / 2) -
+                                      SizeConfig.w(30)
                                 : double.infinity,
                             child: _infoCard(
                               "Total Sales Amount (Today)",
@@ -346,7 +393,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             width: SizeConfig.isDesktop
                                 ? SizeConfig.w(340)
                                 : SizeConfig.isTablet
-                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
+                                ? (SizeConfig.screenWidth / 2) -
+                                      SizeConfig.w(30)
                                 : double.infinity,
                             child: _infoCard(
                               "Total Purchase (Today)",
@@ -359,7 +407,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             width: SizeConfig.isDesktop
                                 ? SizeConfig.w(340)
                                 : SizeConfig.isTablet
-                                ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
+                                ? (SizeConfig.screenWidth / 2) -
+                                      SizeConfig.w(30)
                                 : double.infinity,
                             child: _infoCard(
                               "Units Sold  (Today)",
@@ -369,18 +418,24 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             ),
                           ),
                           Obx(() {
-                            final incentiveValue = totalSalesController.myIncentive.value ?? 0.0;
+                            final incentiveValue =
+                                totalSalesController.myIncentive.value ?? 0.0;
                             return SizedBox(
                               width: SizeConfig.isDesktop
                                   ? SizeConfig.w(340)
                                   : SizeConfig.isTablet
-                                  ? (SizeConfig.screenWidth / 2) - SizeConfig.w(30)
+                                  ? (SizeConfig.screenWidth / 2) -
+                                        SizeConfig.w(30)
                                   : double.infinity,
                               child: _infoCard(
                                 "Team Incentive (Today)",
-                                incentiveValue > 0 ? "₹${incentiveValue.toStringAsFixed(2)}" : "₹0",
+                                incentiveValue > 0
+                                    ? "₹${incentiveValue.toStringAsFixed(2)}"
+                                    : "₹0",
                                 Icons.currency_rupee,
-                                incentiveValue > 0 ? Colors.purple : Colors.grey,
+                                incentiveValue > 0
+                                    ? Colors.purple
+                                    : Colors.grey,
                               ),
                             );
                           }),
@@ -394,19 +449,27 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
 
                       // Category-wise Sales Card
                       Obx(() {
-                        final salesData = categoryWiseSalesController.salesData.value;
+                        final salesData =
+                            categoryWiseSalesController.salesData.value;
 
                         if (categoryWiseSalesController.isLoading.value) {
                           return Card(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: const Padding(
                               padding: EdgeInsets.all(16),
                               child: Center(child: CircularProgressIndicator()),
                             ),
                           );
-                        } else if (categoryWiseSalesController.errorMessage.value != null) {
+                        } else if (categoryWiseSalesController
+                                .errorMessage
+                                .value !=
+                            null) {
                           return Card(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Center(
@@ -420,20 +483,29 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             salesData.data?.categorySales == null ||
                             salesData.data!.categorySales!.isEmpty) {
                           return Card(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: const Padding(
                               padding: EdgeInsets.all(16),
-                              child: Center(child: Text("No category-wise sales data available.")),
+                              child: Center(
+                                child: Text(
+                                  "No category-wise sales data available.",
+                                ),
+                              ),
                             ),
                           );
                         }
-                        final totalSalesAmount = salesData.data?.totalSales ?? 0;
+                        final totalSalesAmount =
+                            salesData.data?.totalSales ?? 0;
                         final categories = salesData.data?.categorySales ?? [];
                         print("gggggggggg");
                         print(categories);
                         return Card(
                           color: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Padding(
                             padding: EdgeInsets.all(SizeConfig.w(16)),
                             child: Column(
@@ -502,20 +574,28 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                   itemCount: categories.length,
                                   itemBuilder: (context, index) {
                                     final category = categories[index];
-                                    final categoryTotalAmount = category.totalAmount ?? 0;
+                                    final categoryTotalAmount =
+                                        category.totalAmount ?? 0;
                                     final percentage = totalSalesAmount > 0
-                                        ? (categoryTotalAmount / totalSalesAmount) * 100
+                                        ? (categoryTotalAmount /
+                                                  totalSalesAmount) *
+                                              100
                                         : 0.0;
                                     return Padding(
-                                      padding: EdgeInsets.only(bottom: SizeConfig.h(8)),
+                                      padding: EdgeInsets.only(
+                                        bottom: SizeConfig.h(8),
+                                      ),
                                       child: Column(
                                         children: [
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 category.category as String,
-                                                style: TextStyle(fontSize: SizeConfig.w(14)),
+                                                style: TextStyle(
+                                                  fontSize: SizeConfig.w(14),
+                                                ),
                                               ),
                                               Text(
                                                 "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
@@ -530,11 +610,14 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                           LinearProgressIndicator(
                                             value: percentage / 100,
                                             backgroundColor: Colors.grey[200],
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              Colors.green.shade700,
-                                            ),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.green.shade700,
+                                                ),
                                             minHeight: SizeConfig.h(6),
-                                            borderRadius: BorderRadius.circular(3),
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -562,7 +645,11 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: const [
-                            BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: Column(
@@ -582,13 +669,29 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                   Row(
                                     children: [
                                       IconButton(
-                                        onPressed: currentSet > 0 ? goPrev : null,
-                                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                                        onPressed: currentSet > 0
+                                            ? goPrev
+                                            : null,
+                                        icon: const Icon(
+                                          Icons.arrow_back_ios_new,
+                                          size: 18,
+                                        ),
                                       ),
-                                      Text(dateRange, style: TextStyle(fontSize: SizeConfig.w(10))),
+                                      Text(
+                                        dateRange,
+                                        style: TextStyle(
+                                          fontSize: SizeConfig.w(10),
+                                        ),
+                                      ),
                                       IconButton(
-                                        onPressed: currentSet < totalSetsLocal - 1 ? goNext : null,
-                                        icon: const Icon(Icons.arrow_forward_ios, size: 18),
+                                        onPressed:
+                                            currentSet < totalSetsLocal - 1
+                                            ? goNext
+                                            : null,
+                                        icon: const Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 18,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -596,7 +699,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                             ),
                             SizedBox(height: SizeConfig.h(4)),
                             Obx(() {
-                              final list = promiseController.filteredData.toList();
+                              final list = promiseController.filteredData
+                                  .toList();
                               return Container(
                                 width: double.infinity,
                                 height: SizeConfig.h(200),
@@ -617,8 +721,11 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                         builder: (context, constraints) {
                                           // Responsive card width based on available screen width
                                           final cardWidth =
-                                              constraints.maxWidth * 0.35; // 35% of screen
-                                          final adjustedWidth = cardWidth < 120 ? 120 : cardWidth;
+                                              constraints.maxWidth *
+                                              0.35; // 35% of screen
+                                          final adjustedWidth = cardWidth < 120
+                                              ? 120
+                                              : cardWidth;
 
                                           return ScrollConfiguration(
                                             behavior: ScrollConfiguration.of(
@@ -631,10 +738,13 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                               ),
                                               itemCount: list.length,
                                               separatorBuilder: (_, __) =>
-                                                  SizedBox(width: SizeConfig.w(10)),
+                                                  SizedBox(
+                                                    width: SizeConfig.w(10),
+                                                  ),
                                               itemBuilder: (context, index) {
                                                 final item = list[index];
-                                                final percent = item['percent'] as int;
+                                                final percent =
+                                                    item['percent'] as int;
                                                 final color = percent >= 100
                                                     ? Colors.green
                                                     : percent >= 80
@@ -646,16 +756,28 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                                 return Align(
                                                   alignment: Alignment.center,
                                                   child: Container(
-                                                    width: SizeConfig.w(120), // ✅ responsive width
-                                                    padding: EdgeInsets.all(SizeConfig.w(6)),
+                                                    width: SizeConfig.w(120),
+                                                    // ✅ responsive width
+                                                    padding: EdgeInsets.all(
+                                                      SizeConfig.w(6),
+                                                    ),
                                                     decoration: BoxDecoration(
-                                                      border: Border.all(color: color, width: 2),
-                                                      borderRadius: BorderRadius.circular(14),
+                                                      border: Border.all(
+                                                        color: color,
+                                                        width: 2,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            14,
+                                                          ),
                                                     ),
                                                     child: Column(
                                                       mainAxisAlignment:
-                                                          MainAxisAlignment.spaceEvenly,
-                                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                                          MainAxisAlignment
+                                                              .spaceEvenly,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .center,
                                                       children: [
                                                         // Number + Date
                                                         Text(
@@ -664,8 +786,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                                             fontSize: SizeConfig.w(
                                                               11,
                                                             ), // ✅ smaller text
-                                                            fontWeight: FontWeight.w500,
-                                                            color: Colors.blueGrey,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            color:
+                                                                Colors.blueGrey,
                                                           ),
                                                         ),
                                                         // Promise
@@ -674,18 +798,34 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                                             Text(
                                                               "Promise",
                                                               style: TextStyle(
-                                                                color: Colors.grey[700],
-                                                                fontSize: SizeConfig.w(10),
+                                                                color: Colors
+                                                                    .grey[700],
+                                                                fontSize:
+                                                                    SizeConfig.w(
+                                                                      10,
+                                                                    ),
                                                               ),
                                                             ),
-                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            SizedBox(
+                                                              height:
+                                                                  SizeConfig.h(
+                                                                    1.2,
+                                                                  ),
+                                                            ),
                                                             FittedBox(
-                                                              fit: BoxFit.scaleDown,
+                                                              fit: BoxFit
+                                                                  .scaleDown,
                                                               child: Text(
-                                                                item['promise'] as String,
+                                                                item['promise']
+                                                                    as String,
                                                                 style: TextStyle(
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontSize: SizeConfig.w(13),
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize:
+                                                                      SizeConfig.w(
+                                                                        13,
+                                                                      ),
                                                                 ),
                                                               ),
                                                             ),
@@ -697,18 +837,34 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                                             Text(
                                                               "Actual",
                                                               style: TextStyle(
-                                                                color: Colors.grey[700],
-                                                                fontSize: SizeConfig.w(10),
+                                                                color: Colors
+                                                                    .grey[700],
+                                                                fontSize:
+                                                                    SizeConfig.w(
+                                                                      10,
+                                                                    ),
                                                               ),
                                                             ),
-                                                            SizedBox(height: SizeConfig.h(1.2)),
+                                                            SizedBox(
+                                                              height:
+                                                                  SizeConfig.h(
+                                                                    1.2,
+                                                                  ),
+                                                            ),
                                                             FittedBox(
-                                                              fit: BoxFit.scaleDown,
+                                                              fit: BoxFit
+                                                                  .scaleDown,
                                                               child: Text(
-                                                                item['actual'] as String,
+                                                                item['actual']
+                                                                    as String,
                                                                 style: TextStyle(
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontSize: SizeConfig.w(13),
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize:
+                                                                      SizeConfig.w(
+                                                                        13,
+                                                                      ),
                                                                 ),
                                                               ),
                                                             ),
@@ -716,20 +872,35 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                                                         ),
                                                         // Percent Indicator
                                                         Container(
-                                                          padding: EdgeInsets.symmetric(
-                                                            vertical: SizeConfig.h(3.2),
-                                                          ),
+                                                          padding:
+                                                              EdgeInsets.symmetric(
+                                                                vertical:
+                                                                    SizeConfig.h(
+                                                                      3.2,
+                                                                    ),
+                                                              ),
                                                           decoration: BoxDecoration(
-                                                            color: color.withOpacity(0.15),
-                                                            borderRadius: BorderRadius.circular(14),
+                                                            color: color
+                                                                .withOpacity(
+                                                                  0.15,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  14,
+                                                                ),
                                                           ),
                                                           child: Center(
                                                             child: Text(
                                                               "$percent%",
                                                               style: TextStyle(
                                                                 color: color,
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: SizeConfig.w(13),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize:
+                                                                    SizeConfig.w(
+                                                                      13,
+                                                                    ),
                                                               ),
                                                             ),
                                                           ),
@@ -773,7 +944,8 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
     final double paddingValue = isMobile ? SizeConfig.w(10) : SizeConfig.w(20);
     final double badgeWidth = isMobile ? SizeConfig.w(50) : SizeConfig.w(70);
 
-    final TopArticlesController topArticlesController = Get.find<TopArticlesController>();
+    final TopArticlesController topArticlesController =
+        Get.find<TopArticlesController>();
     final double cardHeight = isMobile ? SizeConfig.h(150) : SizeConfig.h(180);
 
     return Obx(() {
@@ -805,7 +977,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                       Text(
                         "Highest Selling Products",
                         maxLines: 2,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: titleFontSize),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: titleFontSize,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text("(Last 7 Days)"),
@@ -820,7 +995,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           showPrevious(topArticles.length);
                         },
                         icon: const Icon(Icons.arrow_back_ios),
-                        iconSize: isMobile ? SizeConfig.w(18) : SizeConfig.w(22),
+                        iconSize: isMobile
+                            ? SizeConfig.w(18)
+                            : SizeConfig.w(22),
                         color: currentIndex > 0 ? Colors.black : Colors.grey,
                       ),
                       IconButton(
@@ -828,8 +1005,12 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           showNext(topArticles.length);
                         },
                         icon: const Icon(Icons.arrow_forward_ios),
-                        iconSize: isMobile ? SizeConfig.w(18) : SizeConfig.w(22),
-                        color: currentIndex < topArticles.length - 1 ? Colors.black : Colors.grey,
+                        iconSize: isMobile
+                            ? SizeConfig.w(18)
+                            : SizeConfig.w(22),
+                        color: currentIndex < topArticles.length - 1
+                            ? Colors.black
+                            : Colors.grey,
                       ),
                     ],
                   ),
@@ -844,7 +1025,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                         topArticlesController.isLoading.value
                             ? "Loading top articles..."
                             : "No top articles data available",
-                        style: TextStyle(fontSize: SizeConfig.w(16), color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: SizeConfig.w(16),
+                          color: Colors.grey,
+                        ),
                       ),
                     )
                   : PageView.builder(
@@ -943,12 +1127,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                   children: [
                     Text(
                       "Amount : ₹${article.netAmount.toStringAsFixed(2)}",
-                      style: TextStyle(fontSize: textFontSize, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: textFontSize,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "Qty: ${article.netQuantity}",
-                      style: TextStyle(fontSize: textFontSize, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: textFontSize,
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
@@ -980,7 +1170,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
 
           // Trending Icon
           Padding(
-            padding: EdgeInsets.only(left: SizeConfig.w(8), top: SizeConfig.h(4)),
+            padding: EdgeInsets.only(
+              left: SizeConfig.w(8),
+              top: SizeConfig.h(4),
+            ),
             child: Icon(
               Icons.trending_up,
               color: _getTrendingColor(gpValue),
@@ -1020,12 +1213,14 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
           return Center(
             child: CircularProgressIndicator(
               value: progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                  ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
                   : null,
             ),
           );
         },
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholderIcon(size: size),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderIcon(size: size),
       ),
     );
   }
@@ -1041,7 +1236,12 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
     );
   }
 
-  Widget _infoCard(String title, String value, IconData icon, Color iconBgColor) {
+  Widget _infoCard(
+    String title,
+    String value,
+    IconData icon,
+    Color iconBgColor,
+  ) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(15),
@@ -1054,7 +1254,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
         margin: EdgeInsets.only(bottom: SizeConfig.h(4), right: 0),
         child: Container(
           constraints: BoxConstraints(minHeight: SizeConfig.h(120)),
-          padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(14), vertical: SizeConfig.h(8)),
+          padding: EdgeInsets.symmetric(
+            horizontal: SizeConfig.w(14),
+            vertical: SizeConfig.h(8),
+          ),
           child: Row(
             children: [
               Expanded(
@@ -1064,7 +1267,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: SizeConfig.w(13)),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: SizeConfig.w(13),
+                      ),
                     ),
                     SizedBox(height: SizeConfig.h(2.8)),
                     Text(
@@ -1080,7 +1286,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               ),
               Container(
                 padding: EdgeInsets.all(SizeConfig.w(12)),
-                decoration: BoxDecoration(color: iconBgColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: Colors.white, size: SizeConfig.w(19)),
               ),
             ],
@@ -1140,7 +1349,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
 
       return {
         "day": dv["day"],
-        "date": DateFormat('d/M').format(DateFormat('MMM yyyy').parse(dv["date"])),
+        "date": DateFormat(
+          'd/M',
+        ).format(DateFormat('MMM yyyy').parse(dv["date"])),
         "promise": promise.toStringAsFixed(2),
         "actual": actual.toStringAsFixed(2),
         "percent": percent,
@@ -1153,7 +1364,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1163,7 +1376,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             children: [
               Text(
                 "Promise vs Actual",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: SizeConfig.w(14)),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: SizeConfig.w(14),
+                ),
               ),
               if (staticDailyValues.isNotEmpty)
                 Row(
@@ -1201,12 +1417,17 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                     ),
                   )
                 : ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                    behavior: ScrollConfiguration.of(
+                      context,
+                    ).copyWith(scrollbars: false),
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(10)),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: SizeConfig.w(10),
+                      ),
                       itemCount: currentData.length,
-                      separatorBuilder: (_, __) => SizedBox(width: SizeConfig.w(10)),
+                      separatorBuilder: (_, __) =>
+                          SizedBox(width: SizeConfig.w(10)),
                       itemBuilder: (context, index) {
                         final item = currentData[index];
                         final percent = item['percent'] as int;
@@ -1245,12 +1466,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   item['date'] as String,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: SizeConfig.w(14)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: SizeConfig.w(14),
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(2)),
                 Text(
                   item['day'] as String,
-                  style: TextStyle(color: Colors.grey, fontSize: SizeConfig.w(10)),
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: SizeConfig.w(10),
+                  ),
                 ),
               ],
             ),
@@ -1258,14 +1485,20 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "Promise",
-                  style: TextStyle(color: Colors.grey[700], fontSize: SizeConfig.w(11)),
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: SizeConfig.w(11),
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(1.2)),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     item['promise'] as String,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: SizeConfig.w(14)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: SizeConfig.w(14),
+                    ),
                   ),
                 ),
               ],
@@ -1274,14 +1507,20 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "Actual",
-                  style: TextStyle(color: Colors.grey[700], fontSize: SizeConfig.w(11)),
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: SizeConfig.w(11),
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(1.2)),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     item['actual'] as String,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: SizeConfig.w(14)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: SizeConfig.w(14),
+                    ),
                   ),
                 ),
               ],
@@ -1323,11 +1562,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: SizeConfig.w(20), color: Colors.grey[700]),
+                    Icon(
+                      Icons.calendar_today,
+                      size: SizeConfig.w(20),
+                      color: Colors.grey[700],
+                    ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "Sales Comparison",
-                      style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(16),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1353,9 +1599,12 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             ),
             SizedBox(height: SizeConfig.h(20)),
             Obx(() {
-              final todaySales = (salesComparisonController.todaySalesData.value ?? 0).toDouble();
-              final yesterdaySales = (salesComparisonController.yesterdaySalesData.value ?? 0)
-                  .toDouble();
+              final todaySales =
+                  (salesComparisonController.todaySalesData.value ?? 0)
+                      .toDouble();
+              final yesterdaySales =
+                  (salesComparisonController.yesterdaySalesData.value ?? 0)
+                      .toDouble();
               final difference = todaySales - yesterdaySales;
               final percentageChange = yesterdaySales > 0
                   ? (difference / yesterdaySales) * 100
@@ -1408,7 +1657,11 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(trendIcon, color: trendColor, size: SizeConfig.w(20)),
+                      Icon(
+                        trendIcon,
+                        color: trendColor,
+                        size: SizeConfig.w(20),
+                      ),
                       SizedBox(width: SizeConfig.w(8)),
                       Text(
                         trendText,
@@ -1443,11 +1696,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.apartment, size: SizeConfig.w(20), color: Colors.grey[700]),
+                    Icon(
+                      Icons.apartment,
+                      size: SizeConfig.w(20),
+                      color: Colors.grey[700],
+                    ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "My Branch Performance",
-                      style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(16),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1480,18 +1740,28 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.location_on, size: SizeConfig.w(18), color: Colors.grey[600]),
+                  Icon(
+                    Icons.location_on,
+                    size: SizeConfig.w(18),
+                    color: Colors.grey[600],
+                  ),
                   SizedBox(width: SizeConfig.w(8)),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Mumbai Central Branch",
-                        style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: SizeConfig.w(14),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Text(
                         "Code: MBC-001",
-                        style: TextStyle(fontSize: SizeConfig.w(12), color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: SizeConfig.w(12),
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -1507,7 +1777,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                     children: [
                       Text(
                         "Today's Sales",
-                        style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: SizeConfig.w(14),
+                          color: Colors.grey[600],
+                        ),
                       ),
                       SizedBox(height: SizeConfig.h(4)),
                       Text(
@@ -1527,7 +1800,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                     children: [
                       Text(
                         "Month to Date",
-                        style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: SizeConfig.w(14),
+                          color: Colors.grey[600],
+                        ),
                       ),
                       SizedBox(height: SizeConfig.h(4)),
                       Text(
@@ -1546,7 +1822,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             SizedBox(height: SizeConfig.h(16)),
             Text(
               "Monthly Target Progress",
-              style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: SizeConfig.w(14),
+                color: Colors.grey[600],
+              ),
             ),
             SizedBox(height: SizeConfig.h(4)),
             LinearProgressIndicator(
@@ -1571,23 +1850,40 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             ),
             Text(
               "Remaining: ₹750,000",
-              style: TextStyle(fontSize: SizeConfig.w(13), color: Colors.orange.shade700),
+              style: TextStyle(
+                fontSize: SizeConfig.w(13),
+                color: Colors.orange.shade700,
+              ),
             ),
             SizedBox(height: SizeConfig.h(16)),
             Row(
               children: [
-                Icon(Icons.group, size: SizeConfig.w(16), color: Colors.grey[600]),
+                Icon(
+                  Icons.group,
+                  size: SizeConfig.w(16),
+                  color: Colors.grey[600],
+                ),
                 SizedBox(width: SizeConfig.w(8)),
                 Text(
                   "Team Size: 12",
-                  style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[800]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    color: Colors.grey[800],
+                  ),
                 ),
                 SizedBox(width: SizeConfig.w(24)),
-                Icon(Icons.people_alt, size: SizeConfig.w(16), color: Colors.grey[600]),
+                Icon(
+                  Icons.people_alt,
+                  size: SizeConfig.w(16),
+                  color: Colors.grey[600],
+                ),
                 SizedBox(width: SizeConfig.w(8)),
                 Text(
                   "Customers Today: 156",
-                  style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[800]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    color: Colors.grey[800],
+                  ),
                 ),
               ],
             ),
@@ -1610,11 +1906,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.people_outline, size: SizeConfig.w(20), color: Colors.grey[700]),
+                    Icon(
+                      Icons.people_outline,
+                      size: SizeConfig.w(20),
+                      color: Colors.grey[700],
+                    ),
                     SizedBox(width: SizeConfig.w(8)),
                     Text(
                       "Customer Analytics",
-                      style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: SizeConfig.w(16),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1645,7 +1948,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                   child: Card(
                     color: Colors.green.shade50,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Padding(
                       padding: EdgeInsets.all(SizeConfig.w(5)),
                       child: Column(
@@ -1679,7 +1984,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           ),
                           Text(
                             "↗ +12%",
-                            style: TextStyle(fontSize: SizeConfig.w(12), color: Colors.green),
+                            style: TextStyle(
+                              fontSize: SizeConfig.w(12),
+                              color: Colors.green,
+                            ),
                           ),
                         ],
                       ),
@@ -1691,7 +1999,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                   child: Card(
                     color: Colors.green.shade50,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Padding(
                       padding: EdgeInsets.all(SizeConfig.w(12)),
                       child: Column(
@@ -1727,7 +2037,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           ),
                           Text(
                             "↗ +8%",
-                            style: TextStyle(fontSize: SizeConfig.w(12), color: Colors.green),
+                            style: TextStyle(
+                              fontSize: SizeConfig.w(12),
+                              color: Colors.green,
+                            ),
                           ),
                         ],
                       ),
@@ -1739,7 +2052,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
             SizedBox(height: SizeConfig.h(16)),
             Text(
               "Customer Distribution",
-              style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: SizeConfig.w(16),
+                fontWeight: FontWeight.w600,
+              ),
             ),
             SizedBox(height: SizeConfig.h(12)),
             Row(
@@ -1747,11 +2063,17 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "New vs Repeat",
-                  style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    color: Colors.grey[600],
+                  ),
                 ),
                 Text(
                   "13% : 87%",
-                  style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -1770,11 +2092,17 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "Repeat Rate",
-                  style: TextStyle(fontSize: SizeConfig.w(14), color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    color: Colors.grey[600],
+                  ),
                 ),
                 Text(
                   "68%",
-                  style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -1788,16 +2116,25 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
     return Obx(() {
       if (subordinatesSalesVsPromiseController.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
-      } else if (subordinatesSalesVsPromiseController.errorMessage.value != null) {
+      } else if (subordinatesSalesVsPromiseController.errorMessage.value !=
+          null) {
         return Center(
-          child: Text("Error: ${subordinatesSalesVsPromiseController.errorMessage.value}"),
+          child: Text(
+            "Error: ${subordinatesSalesVsPromiseController.errorMessage.value}",
+          ),
         );
-      } else if (subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value?.data ==
+      } else if (subordinatesSalesVsPromiseController
+              .subordinatesSalesVsPromiseData
+              .value
+              ?.data ==
           null) {
         return const SizedBox.shrink(); // show nothing if no data
       }
 
-      final data = subordinatesSalesVsPromiseController.subordinatesSalesVsPromiseData.value!.data!;
+      final data = subordinatesSalesVsPromiseController
+          .subordinatesSalesVsPromiseData
+          .value!
+          .data!;
       final subordinates = data.subordinates;
 
       if (subordinates == null || subordinates.isEmpty) {
@@ -1812,7 +2149,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
         child: Card(
           color: Colors.white,
           margin: EdgeInsets.symmetric(vertical: SizeConfig.h(8)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: EdgeInsets.all(SizeConfig.w(16)),
             child: Column(
@@ -1820,7 +2159,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "Subordinates Sales vs Promise",
-                  style: TextStyle(fontSize: SizeConfig.w(18), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(18),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(16)),
                 ListView.builder(
@@ -1843,7 +2185,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
   Widget _buildSubordinateTile(Subordinate subordinate) {
     final totalSales = subordinate.totalSales ?? 0;
     final totalPromise = subordinate.totalPromise ?? 0;
-    final percentage = totalPromise > 0 ? (totalSales / totalPromise) * 100 : 0.0;
+    final percentage = totalPromise > 0
+        ? (totalSales / totalPromise) * 100
+        : 0.0;
     Color progressColor = Colors.grey;
     if (percentage >= 80) {
       progressColor = Colors.green;
@@ -1864,12 +2208,18 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   subordinate.name ?? 'N/A',
-                  style: TextStyle(fontSize: SizeConfig.w(16), fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(16),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(4)),
                 Text(
                   "Email: ${subordinate.email ?? 'N/A'}",
-                  style: TextStyle(fontSize: SizeConfig.w(12), color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(12),
+                    color: Colors.grey[600],
+                  ),
                 ),
                 SizedBox(height: SizeConfig.h(8)),
                 Text(
@@ -1910,7 +2260,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
               children: [
                 Text(
                   "Branches:",
-                  style: TextStyle(fontSize: SizeConfig.w(14), fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: SizeConfig.w(14),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 ListView.builder(
                   shrinkWrap: true,
@@ -1932,7 +2285,10 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                       branchProgressColor = Colors.red;
                     }
                     return Padding(
-                      padding: EdgeInsets.only(left: SizeConfig.w(16), top: SizeConfig.h(4)),
+                      padding: EdgeInsets.only(
+                        left: SizeConfig.w(16),
+                        top: SizeConfig.h(4),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1943,7 +2299,9 @@ class _BusinessHeadDashboardState extends State<BusinessHeadDashboard> {
                           LinearProgressIndicator(
                             value: branchPercentage / 100,
                             backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(branchProgressColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              branchProgressColor,
+                            ),
                             minHeight: SizeConfig.h(6),
                             borderRadius: BorderRadius.circular(3),
                           ),

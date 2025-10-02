@@ -68,10 +68,10 @@ class SalesComparisonByPhaseItem {
   final String phase;
   final String startDate;
   final String endDate;
-  final int totalSaleThisYear;
+  final double totalSaleThisYear;
   final int netQtyThisYear;
   final int numberOfBillsThisYear;
-  final int totalSaleLastYear;
+  final double totalSaleLastYear;
   final int netQtyLastYear;
   final int numberOfBillsLastYear;
 
@@ -92,10 +92,10 @@ class SalesComparisonByPhaseItem {
       phase: json['phase'] ?? '',
       startDate: json['startDate'] ?? '',
       endDate: json['endDate'] ?? '',
-      totalSaleThisYear: json['totalSaleThisYear'] ?? 0,
+      totalSaleThisYear: (json['totalSaleThisYear'] as num?)?.toDouble() ?? 0.0,
       netQtyThisYear: json['netQtyThisYear'] ?? 0,
       numberOfBillsThisYear: json['numberOfBillsThisYear'] ?? 0,
-      totalSaleLastYear: json['totalSaleLastYear'] ?? 0,
+      totalSaleLastYear: (json['totalSaleLastYear'] as num?)?.toDouble() ?? 0.0,
       netQtyLastYear: json['netQtyLastYear'] ?? 0,
       numberOfBillsLastYear: json['numberOfBillsLastYear'] ?? 0,
     );

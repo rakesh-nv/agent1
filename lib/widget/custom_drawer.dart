@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:mbindiamy/branch/stafInBranch/brachManagerScreen.dart';
-import 'package:mbindiamy/branch/stafInBranch/billingManager.dart';
-import 'package:mbindiamy/branch/stafInBranch/salesAgentScreen.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/purchase/purchaseHead.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/purchase/regionalPurchaseLead.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/purchase/branchPurchaseCoordinator.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/sales/branchSalesHead.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/sales/branchSalesCoordinator.dart';
-import 'package:mbindiamy/branch/stafNotInBranch/sales/regionalSalesHeadScreen.dart';
+
+import '../screen/sales/stafInBranch/billingManager.dart';
+import '../screen/sales/stafInBranch/salesAgentScreen.dart';
+import '../screen/sales/stafNotInBranch/purchase/branchPurchaseCoordinator.dart';
+import '../screen/sales/stafNotInBranch/purchase/purchaseHead.dart';
+import '../screen/sales/stafNotInBranch/sales/branchSalesCoordinator.dart';
+import '../screen/sales/stafNotInBranch/sales/branchSalesHead.dart';
+import '../screen/sales/stafNotInBranch/sales/regionalSalesHeadScreen.dart';
 
 // Utility class for responsive sizing
 class SizeConfig {
@@ -65,19 +64,19 @@ class CustomDrawer extends StatelessWidget {
               ],
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.business),
-            title: const Text('Branch Manager Dashboard'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BranchManagerScreen(),
-                ),
-              );
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.business),
+          //   title: const Text('Branch Manager Dashboard'),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => const BranchManagerScreen(),
+          //       ),
+          //     );
+          //   },
+          // ),
           ListTile(
             leading: const Icon(Icons.money),
             title: const Text('Billing Manager Dashboard'),
@@ -117,19 +116,19 @@ class CustomDrawer extends StatelessWidget {
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.leaderboard),
-            title: const Text('Regional Purchase Lead Dashboard'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RegionalPurchaseLeadScreen(),
-                ),
-              );
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.leaderboard),
+          //   title: const Text('Regional Purchase Lead Dashboard'),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => const RegionalPurchaseLeadScreen(),
+          //       ),
+          //     );
+          //   },
+          // ),
           ListTile(
             leading: const Icon(Icons.local_shipping),
             title: const Text('Branch Purchase Coordinator Dashboard'),

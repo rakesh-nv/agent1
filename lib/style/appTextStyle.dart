@@ -1,20 +1,44 @@
 import 'dart:ui';
 
-import '../branch/stafInBranch/billingManager.dart';
 import 'package:flutter/material.dart';
+
+import 'siseConfig.dart';
+
 class AppTextStyles {
-  static double get headline => SizeConfig.isDesktop ? 22 : SizeConfig.isTablet ? 20 : 18;
-  static double get subheadline => SizeConfig.isDesktop ? 18 : SizeConfig.isTablet ? 16 : 14;
-  static double get body => SizeConfig.isDesktop ? 16 : SizeConfig.isTablet ? 14 : 12;
-  static double get caption => SizeConfig.isDesktop ? 14 : SizeConfig.isTablet ? 12 : 10;
-  static double get small => SizeConfig.isDesktop ? 12 : SizeConfig.isTablet ? 10 : 8;
+  static double get headline => SizeConfig.isDesktop
+      ? 22
+      : SizeConfig.isTablet
+      ? 20
+      : 18;
+  static double get subheadline => SizeConfig.isDesktop
+      ? 18
+      : SizeConfig.isTablet
+      ? 16
+      : 14;
+  static double get body => SizeConfig.isDesktop
+      ? 16
+      : SizeConfig.isTablet
+      ? 14
+      : 12;
+  static double get caption => SizeConfig.isDesktop
+      ? 14
+      : SizeConfig.isTablet
+      ? 12
+      : 10;
+  static double get small => SizeConfig.isDesktop
+      ? 12
+      : SizeConfig.isTablet
+      ? 10
+      : 8;
 
   static TextStyle headlineText({
     Color color = Colors.black,
     FontWeight fontWeight = FontWeight.bold,
   }) {
     return TextStyle(
-      fontSize: SizeConfig.w(headline).clamp(12, 24), // Clamp to prevent oversized text
+      fontSize: SizeConfig.w(
+        headline,
+      ).clamp(12, 24), // Clamp to prevent oversized text
       fontWeight: fontWeight,
       color: color,
     );

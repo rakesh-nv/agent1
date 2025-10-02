@@ -1,13 +1,15 @@
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:mbindiamy/api_services/branch/branch_promise_with_actual_api_services.dart';
-import 'package:mbindiamy/model/promise_vs_actual_model.dart';
+import 'package:mbindiamy/model/branch_wise_sales_model/atual_vs_promise_branch_model.dart'
+    as BranchModel;
 import 'package:mbindiamy/utils/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class PromiseActualController extends GetxController {
   final isLoading = false.obs;
   final errorMessage = Rx<String?>(null);
-  final data = Rx<PromiseActualResponse?>(null);
+  final data = Rx<BranchModel.PromiseActualResponse?>(null);
 
   final currentData = <Map<String, dynamic>>[].obs; // full month data
   final filteredData = <Map<String, dynamic>>[].obs; // 👈 only up to today
@@ -41,14 +43,91 @@ class PromiseActualController extends GetxController {
       //   return;
       // }
 
-      final response = await _api.fetchPromiseWithActual(
-        year: currentYear.value,
-        month: currentMonth.value,
-        branch: branch,
-      );
+      // Fetch current month and previous month, then merge for last 7 days
+      final int yearNow = currentYear.value;
+      final int monthNow = currentMonth.value; // 1..12
+      final int prevMonth = monthNow == 1 ? 12 : monthNow - 1;
+      final int prevYear = monthNow == 1 ? yearNow - 1 : yearNow;
 
-      currentData.value = _api.mapToUiList(response);
-      _updateFilteredData(); // 👈 always refresh filteredData
+      final BranchModel.PromiseActualResponse currentResp = await _api
+          .fetchPromiseWithActual(
+            year: yearNow,
+            month: monthNow,
+            branch: branch,
+          );
+      final BranchModel.PromiseActualResponse prevResp = await _api
+          .fetchPromiseWithActual(
+            year: prevYear,
+            month: prevMonth,
+            branch: branch,
+          );
+
+      // Merge daily values across locations for both months into a date map
+      final Map<String, Map<String, double>> byDate = {};
+      void addResponse(BranchModel.PromiseActualResponse resp) {
+        for (final loc in resp.data.locations) {
+          for (final dv in loc.dailyValues) {
+            try {
+              final DateTime dt = DateTime.parse(dv.date);
+              final String key = DateFormat('yyyy-MM-dd').format(dt);
+              final agg = byDate.putIfAbsent(
+                key,
+                () => {"promise": 0.0, "actual": 0.0},
+              );
+              agg["promise"] = (agg["promise"] ?? 0) + (dv.promise.toDouble());
+              agg["actual"] = (agg["actual"] ?? 0) + (dv.actual.toDouble());
+            } catch (_) {
+              // ignore parse errors
+            }
+          }
+        }
+      }
+
+      addResponse(prevResp);
+      addResponse(currentResp);
+
+      // Build last 7 days window up to today, include zeros if missing
+      final DateTime today = DateTime.now();
+      final DateTime start = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(const Duration(days: 6));
+      final List<Map<String, dynamic>> last7 = [];
+      for (int i = 0; i < 7; i++) {
+        final DateTime d = start.add(Duration(days: i));
+        final String key = DateFormat('yyyy-MM-dd').format(d);
+        final Map<String, double>? agg = byDate[key];
+        final double promise = agg == null ? 0.0 : (agg["promise"] ?? 0.0);
+        final double actual = agg == null ? 0.0 : (agg["actual"] ?? 0.0);
+        final int percent = promise > 0
+            ? ((actual / promise) * 100).round()
+            : 0;
+        last7.add({
+          'date': DateFormat('d MMM yyyy').format(d),
+          'promise': promise,
+          'actual': actual,
+          'percent': percent,
+        });
+      }
+
+      // Also store current month list if needed for other views (optional)
+      currentData
+        ..clear()
+        ..addAll(last7);
+
+      // For widget consumption, provide formatted strings (compact e.g. 500k)
+      final compact = NumberFormat.compact();
+      filteredData.value = last7
+          .map(
+            (e) => {
+              'date': e['date'],
+              'promise': compact.format((e['promise'] as double)).toLowerCase(),
+              'actual': compact.format((e['actual'] as double)).toLowerCase(),
+              'percent': e['percent'],
+            },
+          )
+          .toList();
     } catch (e) {
       errorMessage.value = e.toString();
       data.value = null;
@@ -59,16 +138,7 @@ class PromiseActualController extends GetxController {
     }
   }
 
-  void _updateFilteredData() {
-    final today = DateTime.now().day;
-
-    print(today);
-    // take first `today` records (assuming your list is already ordered)
-    final temp = currentData.take(today).toList();
-
-    // reverse so latest day is last
-    filteredData.value = temp.reversed.toList();
-  }
+  // Removed old filtered updater; merged last-7 is computed directly in load
 
   void changePeriod(int year, int month) {
     currentYear.value = year;

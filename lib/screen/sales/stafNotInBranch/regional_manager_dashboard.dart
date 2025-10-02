@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
 import 'package:mbindiamy/widget/appbar_widget.dart';
 
-import '../../../branch/stafInBranch/billingManager.dart';
 import '../../../controllers/ArticleWithMrpAndStockController.dart';
 import '../../../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../../../controllers/login_controller.dart';
@@ -16,6 +15,7 @@ import '../../../model/top_artical_model.dart';
 
 import '../../../model/top_artical_model.dart' as TopArticleData;
 import '../../../style/appTextStyle.dart';
+import '../../../style/siseConfig.dart';
 import '../../../widget/navigator_widget.dart';
 import 'package:get/get.dart';
 

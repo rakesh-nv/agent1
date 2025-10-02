@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mbindiamy/controllers/ArticleWithMrpAndStockController.dart';
+import 'package:mbindiamy/controllers/subordinates_aggregation_controller.dart';
 import 'package:mbindiamy/screen/businessHead/business_head_dashboard.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/BranchManagerSalesVsPromiseController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
@@ -48,6 +49,7 @@ void main() async {
       connectivity: Connectivity(),
     ),
   );
+  Get.put(SubordinatesAggregationController());
   Get.put(BranchManagerSalesVsPromiseController());
   Get.put(SalesByPhaseController());
   Get.put(PromiseActualController());

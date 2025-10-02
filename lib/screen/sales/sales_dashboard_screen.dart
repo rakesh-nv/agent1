@@ -13,11 +13,11 @@ import 'package:mbindiamy/widget/appbar_widget.dart';
 import 'package:mbindiamy/widget/navigator_widget.dart';
 import 'package:mbindiamy/model/salesagentModel/sales_comparison_by_phase_modal.dart';
 
-import '../../branch/stafInBranch/billingManager.dart';
 import '../../controllers/subordinates_sales_vs_promise_controller.dart';
 import '../../model/subordinates_sales_vs_promise_model.dart';
 import '../../model/top_artical_model.dart' as TopArticleData;
 import '../../style/appTextStyle.dart';
+import '../../style/siseConfig.dart';
 
 // Utility class for responsive sizing
 // class SizeConfig {
@@ -165,8 +165,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
       final totalNetSlsQty =
           totalSalesController.salesData.value?.totalNetSlsQty ?? 0;
 
-      // Get promise vs actual data from PromiseActualController
-      // Build a simple list that the last-7-days computation will use
+      // Get last 7 days promise vs actual (merged across months) from controller
       final allDailyValues = promiseController.filteredData.toList();
 
       // Get phase data from SalesByPhaseController
@@ -186,63 +185,13 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
       final now = DateTime.now();
       final salesDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
 
-      // Last 7 days already computed in controller
+      // Use the prepared last-7 list directly
       var filteredDailyValues = allDailyValues;
-
-      // No pagination for last 7 days view
-      final totalSetsLocal = 1;
-
-      List<Map<String, dynamic>> currentData = [];
+      final int totalSetsLocal = 1;
       String dateRange = "";
       if (filteredDailyValues.isNotEmpty) {
-        currentData = filteredDailyValues.map((dv) {
-          try {
-            final dateString = dv["date"] as String;
-            // Dates are already normalized as dd/MM or d/M strings; parse permissively
-            DateTime dt;
-            try {
-              dt = DateFormat('d/M').parse(dateString);
-              dt = DateTime(now.year, dt.month, dt.day);
-            } catch (_) {
-              dt = DateTime.now();
-            }
-            final day = [
-              'Sun',
-              'Mon',
-              'Tue',
-              'Wed',
-              'Thu',
-              'Fri',
-              'Sat',
-            ][dt.weekday % 7];
-            final dateStr = "${dt.day}/${dt.month}";
-            final promise = (dv["promise"] as num).toDouble();
-            final actual = (dv["actual"] as num).toDouble();
-            final percent = promise > 0
-                ? ((actual / promise) * 100).round()
-                : 0;
-            return {
-              "day": day,
-              "date": dateStr,
-              "promise": promise.toStringAsFixed(2),
-              "actual": actual.toStringAsFixed(2),
-              "percent": percent,
-            };
-          } catch (e) {
-            return {
-              "day": 'N/A',
-              "date": 'N/A',
-              "promise": '0.00',
-              "actual": '0.00',
-              "percent": 0,
-            };
-          }
-        }).toList();
-
-        if (currentData.isNotEmpty) {
-          dateRange =
-              "${currentData.first['date']} - ${currentData.last['date']}";
-        }
+        dateRange =
+            "${filteredDailyValues.first['date']} - ${filteredDailyValues.last['date']}";
       }
 
       // Removed unused loginResponse
@@ -412,31 +361,11 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                   "Promise vs Actual",
                   style: AppTextStyles.subheadlineText(),
                 ),
-                if (filteredDailyValues.isNotEmpty)
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: currentSet > 0 ? goPrev : null,
-                        icon: Icon(
-                          Icons.arrow_back_ios_new,
-                          // size: SizeConfig.w(18),
-                          size: iconSize,
-                        ),
-                      ),
-
-                      IconButton(
-                        onPressed: currentSet < totalSetsLocal - 1
-                            ? goNext
-                            : null,
-                        icon: Icon(Icons.arrow_forward_ios, size: iconSize),
-                      ),
-                    ],
-                  ),
               ],
             ),
             SizedBox(height: SizeConfig.h(4)),
             Obx(() {
-              final list = promiseController.filteredData.toList();
+              final list = promiseController.filteredData.reversed.toList();
               // Determine if the screen is large (e.g., width > 600 pixels)
               final isLargeScreen = MediaQuery.of(context).size.height > 600;
               print("hight" + isLargeScreen.toString());
@@ -495,7 +424,7 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "$reverseIndex ${item['date']}",
+                                    "${item['date']}",
                                     style: AppTextStyles.captionText(
                                       color: Colors.blueGrey,
                                       fontWeight: FontWeight.w500,
@@ -1220,10 +1149,10 @@ class PhaseTwoInfoWidget extends StatelessWidget {
         }
       }
 
-      final int phaseThisYear = currentPhaseItem.totalSaleThisYear;
-      final int totalThisYear = items.fold(
-        0,
-        (sum, e) => sum + (e.totalSaleThisYear),
+      final double phaseThisYear = currentPhaseItem.totalSaleThisYear;
+      final double totalThisYear = items.fold<double>(
+        0.0,
+        (sum, e) => sum + e.totalSaleThisYear,
       );
 
       return Card(

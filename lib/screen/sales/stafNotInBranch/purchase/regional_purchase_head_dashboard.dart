@@ -173,7 +173,7 @@ class _RegionalPurchaseHeadDashboardState extends State<RegionalPurchaseHeadDash
           .map(
             (dailyValue) => {
               "date": dailyValue.date.toString(),
-              "day": dailyValue.date.day,
+              "day": DateTime.parse(dailyValue.date.toString()).day,
               "promise": dailyValue.promise,
               "actual": dailyValue.actual,
             },

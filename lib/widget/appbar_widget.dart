@@ -1,9 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mbindiamy/style/appstyle.dart';
-import 'package:cupertino_icons/cupertino_icons.dart';
-import '../branch/stafInBranch/billingManager.dart'; // Assuming SizeConfig is defined here
-import 'package:cupertino_icons/cupertino_icons.dart';
+
+// Removed unused import
+import 'package:mbindiamy/style/siseConfig.dart';
+
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String userName;
 
@@ -28,7 +29,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final appStyle = AppStyle(context);
     final isLandscape = SizeConfig.screenWidth > SizeConfig.screenHeight;
     final paddingTop = SizeConfig.h(
-      isLandscape ? 20 : 45,
+      isLandscape ? 20 : 100,
     ); // Reduced top padding in landscape
     final paddingHorizontal = appStyle.defaultPadding;
     final paddingBottom = SizeConfig.h(isLandscape ? 10 : 20);
@@ -117,5 +118,5 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(SizeConfig.h(120)); // Dynamic height based on orientation
+  Size get preferredSize => const Size.fromHeight(120); // Use constant to avoid pre-build init
 }
