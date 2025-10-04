@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/BranchManagerSalesVsPromiseController.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
@@ -87,6 +88,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         totalSalesController.fetchTodaysSales().catchError(
           (e) => debugPrint("Total Sales error: $e"),
         ),
+        totalSalesController.fetchThisMonthSales().catchError(
+          (e) => debugPrint("Total Sales error: $e"),
+        ),
         topArticlesController.loadTopArticles().catchError(
           (e) => debugPrint("loadTopArticles error"),
         ),
@@ -168,193 +172,212 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         : SizeConfig.isTablet
         ? SizeConfig.w(20)
         : SizeConfig.w(8);
-    final loginResponse = loginController.loginResponse.value;
-    final user = loginResponse?.data?.user;
-    String userId =
-        user?.userType.toLowerCase() == 'head' || user?.isAllBranches == true
-        ? 'All Branches'
-        : user?.selectedBranchAliases.join(', ') ?? '';
 
-    final allDailyValues = (promiseController.data.value?.data.locations ?? [])
-        .expand((location) => location.dailyValues)
-        .map(
-          (dv) => {
-            "date": dv.date.toString(),
-            "day": DateTime.parse(dv.date.toString()).day,
-            "promise": dv.promise,
-            "actual": dv.actual,
-          },
-        )
-        .toList();
+    return Obx(() {
 
-    final now = DateTime.now();
-    final currentYear = now.year;
-    final currentMonth = now.month;
-    final filteredDailyValues = allDailyValues.where((dv) {
-      try {
-        final dateString = dv["date"] as String;
-        if (dateString.isEmpty) return false;
-        final dt = DateFormat('d/M').parse(dateString);
-        return dt.year == currentYear && dt.month == currentMonth;
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+      final loginResponse = loginController.loginResponse.value;
+      final user = loginResponse?.data?.user;
+      String userId =
+      user?.userType.toLowerCase() == 'head' || user?.isAllBranches == true
+          ? 'All Branches'
+          : user?.selectedBranchAliases.join(', ') ?? '';
 
-    final itemsPerPage = SizeConfig.isMobile ? 3 : 4;
-    final totalSetsLocal = (filteredDailyValues.length / itemsPerPage).ceil();
-    List<Map<String, dynamic>> currentData = [];
-    String dateRange = "";
-    if (filteredDailyValues.isNotEmpty) {
-      final startIndex = currentSet * itemsPerPage;
-      final endIndex = (startIndex + itemsPerPage < filteredDailyValues.length)
-          ? startIndex + itemsPerPage
-          : filteredDailyValues.length;
-      currentData = filteredDailyValues.sublist(startIndex, endIndex).map((dv) {
+      final allDailyValues = (promiseController.data.value?.data.locations ?? [])
+          .expand((location) => location.dailyValues)
+          .map(
+            (dv) => {
+          "date": dv.date.toString(),
+          "day": DateTime.parse(dv.date.toString()).day,
+          "promise": dv.promise,
+          "actual": dv.actual,
+        },
+      )
+          .toList();
+
+      final now = DateTime.now();
+      final currentYear = now.year;
+      final currentMonth = now.month;
+      final filteredDailyValues = allDailyValues.where((dv) {
         try {
           final dateString = dv["date"] as String;
+          if (dateString.isEmpty) return false;
           final dt = DateFormat('d/M').parse(dateString);
-          final day = [
-            'Sun',
-            'Mon',
-            'Tue',
-            'Wed',
-            'Thu',
-            'Fri',
-            'Sat',
-          ][dt.weekday % 7];
-          final dateStr = "${dt.day}/${dt.month}";
-          final promise = (dv["promise"] as num).toDouble();
-          final actual = (dv["actual"] as num).toDouble();
-          final percent = promise > 0 ? ((actual / promise) * 100).round() : 0;
-          return {
-            "day": day,
-            "date": dateStr,
-            "promise": promise.toStringAsFixed(2),
-            "actual": actual.toStringAsFixed(2),
-            "percent": percent,
-          };
+          return dt.year == currentYear && dt.month == currentMonth;
         } catch (e) {
-          return {
-            "day": 'N/A',
-            "date": 'N/A',
-            "promise": '0.00',
-            "actual": '0.00',
-            "percent": 0,
-          };
+          return false;
         }
       }).toList();
-      dateRange = "${currentData.first['date']} - ${currentData.last['date']}";
-    }
-    final userName =
-        loginController.loginResponse.value?.data!.user.name ?? "Loading...";
-    final reportingName = reportingController.manager.value ?? "Loading...";
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      drawer: NavigationDrawerWidget(),
-      appBar: CustomAppBar(
-        userName: userName,
-        reportingTo: reportingName,
-        onNotificationPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notifications clicked!')),
-          );
-        },
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadDashboardData,
-        child: SingleChildScrollView(
-          controller: _mainScrollController,
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: SizeConfig.h(6),
-          ),
-          child: Obx(() {
-            if (!salesComparisonController.hasConnection.value) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.wifi_off,
-                      size: SizeConfig.w(60),
-                      color: Colors.grey[400],
-                    ),
-                    SizedBox(height: SizeConfig.h(20)),
-                    Text(
-                      "No Internet Connection",
-                      style: AppTextStyles.headlineText(color: Colors.grey),
-                    ),
-                    SizedBox(height: SizeConfig.h(10)),
-                    Text(
-                      "Please check your internet connection and try again.",
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyText(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return Column(
-              children: [
-                Obx(
-                  () => _buildInfoCard(
-                    1,
-                    "Today's Revenue",
-                    "₹${NumberFormat('#,##,###').format(totalSalesController.salesData.value?.totalNetAmount) ?? '0.0'}",
-                    Icons.currency_rupee,
-                    Colors.green,
-                  ),
-                ),
-                // Consistent gap
-                Obx(
-                  () => _buildInfoCard(
-                    1,
-                    "Unit Sold (Today)",
-                    "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
-                    Icons.shopping_cart_outlined,
-                    Colors.blue,
-                  ),
-                ),
-                // Consistent gap
-                Obx(
-                  () => _buildInfoCard(
-                    1,
-                    "My Incentive (Today)",
-                    (totalSalesController.myIncentive.value ?? 0.0) > 0
-                        ? "₹${(NumberFormat('#,##,###').format(totalSalesController.myIncentive.value))}"
-                        : "₹0",
-                    Icons.trending_up,
-                    (totalSalesController.myIncentive.value ?? 0.0) > 0
-                        ? Colors.purple
-                        : Colors.grey,
-                  ),
-                ),
-                // Consistent gap
-                _buildSalesComparisonCard(),
-                // Consistent gap
-                Obx(() => _buildCategoryWiseSalesCard()),
-                // Consistent gap
-                highestSellingProduct(context),
-                // Consistent gap
-                _buildPromiseVsActualCard(
-                  filteredDailyValues,
-                  totalSetsLocal,
-                  dateRange,
-                ),
-                // Consistent gap
-                // _buildSubordinatesSalesVsPromiseCard(),
-                _buildIncentiveDashboardCard(),
-                // Consistent gap
-                // _buildArticleWithMrpAndStockCard(),
-                ArticleWithMrpAndStockCard(),
-              ],
+      final itemsPerPage = SizeConfig.isMobile ? 3 : 4;
+      final totalSetsLocal = (filteredDailyValues.length / itemsPerPage).ceil();
+      List<Map<String, dynamic>> currentData = [];
+      String dateRange = "";
+      if (filteredDailyValues.isNotEmpty) {
+        final startIndex = currentSet * itemsPerPage;
+        final endIndex = (startIndex + itemsPerPage < filteredDailyValues.length)
+            ? startIndex + itemsPerPage
+            : filteredDailyValues.length;
+        currentData = filteredDailyValues.sublist(startIndex, endIndex).map((dv) {
+          try {
+            final dateString = dv["date"] as String;
+            final dt = DateFormat('d/M').parse(dateString);
+            final day = [
+              'Sun',
+              'Mon',
+              'Tue',
+              'Wed',
+              'Thu',
+              'Fri',
+              'Sat',
+            ][dt.weekday % 7];
+            final dateStr = "${dt.day}/${dt.month}";
+            final promise = (dv["promise"] as num).toDouble();
+            final actual = (dv["actual"] as num).toDouble();
+            final percent = promise > 0 ? ((actual / promise) * 100).round() : 0;
+            return {
+              "day": day,
+              "date": dateStr,
+              "promise": promise.toStringAsFixed(2),
+              "actual": actual.toStringAsFixed(2),
+              "percent": percent,
+            };
+          } catch (e) {
+            return {
+              "day": 'N/A',
+              "date": 'N/A',
+              "promise": '0.00',
+              "actual": '0.00',
+              "percent": 0,
+            };
+          }
+        }).toList();
+        dateRange = "${currentData.first['date']} - ${currentData.last['date']}";
+      }
+      final userName =
+          loginController.loginResponse.value?.data!.user.name ?? "Loading...";
+      final reportingName = reportingController.manager.value ?? "Loading...";
+      final salesDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
+
+      return Scaffold(
+        backgroundColor: Colors.white,
+        drawer: NavigationDrawerWidget(),
+        appBar: CustomAppBar(
+          userName: userName,
+          reportingTo: reportingName,
+          onNotificationPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notifications clicked!')),
             );
-          }),
+          },
         ),
-      ),
-    );
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return RefreshIndicator(
+              onRefresh: _loadDashboardData,
+              child: Obx(() {
+                return SingleChildScrollView(
+                  controller: _mainScrollController,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: SizeConfig.h(6),
+                  ),
+                  child: !salesComparisonController.hasConnection.value
+                      ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.wifi_off,
+                          size: SizeConfig.w(60),
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: SizeConfig.h(20)),
+                        Text(
+                          "No Internet Connection",
+                          style: AppTextStyles.headlineText(
+                            color: Colors.grey,
+                          ),
+                        ),
+                        SizedBox(height: SizeConfig.h(10)),
+                        Text(
+                          "Please check your internet connection and try again.",
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyText(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                      : Column(
+                    children: [
+                      Obx(
+                            () => _buildInfoCard(
+                          1,
+                          "Total Sales Amount($salesDateStr)",
+                          // "₹${totalSalesController.salesData.value?.totalNetAmount ?? '0.0'}",
+                          (totalSalesController
+                              .salesData
+                              .value
+                              ?.totalNetAmount ??
+                              0.0) >
+                              0
+                              ? "₹${(NumberFormat('#,##,###').format(totalSalesController.salesData.value?.totalNetAmount))}"
+                              : "₹0",
+                          Icons.currency_rupee,
+                          Colors.green,
+                        ),
+                      ),
+                      Obx(
+                            () => _buildInfoCard(
+                          1,
+                          "Unit Sold ($salesDateStr)",
+                          "${totalSalesController.salesData.value?.totalNetSlsQty ?? 0} Qty",
+                          Icons.shopping_cart_outlined,
+                          Colors.blue,
+                        ),
+                      ),
+                      Obx(
+                            () => _buildInfoCard(
+                          1,
+                          "My Incentive ($salesDateStr)",
+                          (totalSalesController.myIncentive.value ?? 0.0) >
+                              0
+                              ? "₹${(NumberFormat('#,##,###').format(totalSalesController.myIncentive.value))}"
+                              : "₹0",
+                          Icons.trending_up,
+                          (totalSalesController.myIncentive.value ?? 0.0) >
+                              0
+                              ? Colors.purple
+                              : Colors.grey,
+                        ),
+                      ),
+                      // Consistent gap
+                      _buildSalesComparisonCard(),
+                      // Consistent gap
+                      Obx(() => _buildCategoryWiseSalesCard()),
+                      // Consistent gap
+                      _buildBranchPerformanceCard(),
+
+                      _buildPromiseVsActualCard(
+                        filteredDailyValues,
+                        totalSetsLocal,
+                        dateRange,
+                      ),
+                      highestSellingProduct(context),
+                      // _buildSubordinatesSalesVsPromiseCard(),
+                      _buildIncentiveDashboardCard(),
+                      // Consistent gap
+                      // _buildArticleWithMrpAndStockCard(),
+                      ArticleWithMrpAndStockCard(),
+                    ],
+                  ),
+                );
+              }),
+            );
+          },
+        ),
+      );
+    },);
+
   }
 
   Widget _buildPromiseVsActualCard(
@@ -363,9 +386,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     String dateRange,
   ) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final iconSize = screenWidth < 600
-        ? 18.0
-        : 24.0; // mobile vs tablet/desktop
+    final iconSize = screenWidth < 600 ? 18.0 : 24.0;
 
     return Card(
       color: Colors.white,
@@ -376,13 +397,6 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(SizeConfig.w(5)),
-          // boxShadow: [
-          //   BoxShadow(
-          //     color: Colors.black12,
-          //     blurRadius: 4,
-          //     offset: const Offset(0, 2),
-          //   ),
-          // ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,40 +408,25 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   "Promise vs Actual",
                   style: AppTextStyles.subheadlineText(),
                 ),
-                if (filteredDailyValues.isNotEmpty)
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: currentSet > 0 ? goPrev : null,
-                        icon: Icon(
-                          Icons.arrow_back_ios_new,
-                          // size: SizeConfig.w(18),
-                          size: iconSize,
-                        ),
-                      ),
-
-                      IconButton(
-                        onPressed: currentSet < totalSetsLocal - 1
-                            ? goNext
-                            : null,
-                        icon: Icon(Icons.arrow_forward_ios, size: iconSize),
-                      ),
-                    ],
-                  ),
               ],
             ),
             SizedBox(height: SizeConfig.h(4)),
             Obx(() {
-              final list = promiseController.filteredData.toList();
-              // Determine if the screen is large (e.g., width > 600 pixels)
+              final list = promiseController.filteredData
+                  .where(
+                    (item) =>
+                        item['percent'] != null &&
+                        item['promise'] != null &&
+                        item['actual'] != null,
+                  )
+                  .toList()
+                  .reversed
+                  .toList();
               final isLargeScreen = MediaQuery.of(context).size.height > 600;
-              print("hight" + isLargeScreen.toString());
-              // Set height based on screen size
               final containerHeight = isLargeScreen
                   ? MediaQuery.of(context).size.height * 0.2
                   : MediaQuery.of(context).size.height * 0.5;
               return SizedBox(
-                // height: SizeConfig.h(180),
                 height: containerHeight,
                 child: list.isEmpty
                     ? Center(
@@ -455,13 +454,13 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                               SizedBox(width: SizeConfig.w(8)),
                           itemBuilder: (context, index) {
                             final item = list[index];
-                            final percent = item['percent'] as int;
+                            final percent =
+                                (item['percent'] as num?)?.toInt() ?? 0;
                             final color = percent >= 100
                                 ? Colors.green
                                 : percent >= 80
                                 ? Colors.orange
                                 : Colors.red;
-                            final reverseIndex = list.length - index;
                             return Container(
                               width: SizeConfig.w(100),
                               padding: EdgeInsets.all(SizeConfig.w(6)),
@@ -496,7 +495,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          item['promise'] as String,
+                                          item['promise'] as String? ?? '0.00',
                                           style: AppTextStyles.bodyText(
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -516,7 +515,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          item['actual'] as String,
+                                          item['actual'] as String? ?? '0.00',
                                           style: AppTextStyles.bodyText(
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -829,7 +828,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Amount: ₹${article.netAmount.toStringAsFixed(2)}",
+                      "Amount: ₹${NumberFormat("#,##,##").format(article.netAmount)}",
                       style: AppTextStyles.bodyText(),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -985,15 +984,16 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   ? (
                       Colors.green,
                       Icons.trending_up,
-                      "+${percentageChange.toStringAsFixed(1)}% vs yesterday (₹${difference.toStringAsFixed(0)})",
+                      "+${percentageChange.toStringAsFixed(1)}%",
                     )
-                  : difference < 0
-                  ? (
+                  :
+                    // difference < 0 ?
+                    (
                       Colors.red,
                       Icons.trending_down,
-                      "${percentageChange.toStringAsFixed(1)}% vs yesterday (₹${difference.abs().toStringAsFixed(0)})",
-                    )
-                  : (Colors.orange, Icons.show_chart, "No change vs yesterday");
+                      "${percentageChange.toStringAsFixed(1)}% ",
+                    );
+              // : (Colors.orange, Icons.show_chart, "No change vs yesterday");
 
               return Column(
                 children: [
@@ -1002,8 +1002,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       Expanded(
                         child: _buildInfoCard(
                           0,
-                          "Today's Sales",
-                          "₹${todaySales.toStringAsFixed(0)}",
+                          "Today",
+                          "₹${NumberFormat("#,##,###").format(todaySales)}",
                           null, // Keep the icon
                           null, // Keep the icon color
                         ),
@@ -1011,8 +1011,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       Expanded(
                         child: _buildInfoCard(
                           0,
-                          "Yesterday's Sales",
-                          "₹${yesterdaySales.toStringAsFixed(0)}",
+                          "Yesterday",
+                          "₹${NumberFormat("#,##,###").format(yesterdaySales)}",
                           null, // Icon is optional, passing null
                           null, // Icon color is optional, passing null
                         ),
@@ -1045,6 +1045,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        Text(
+                          "vs yesterday (₹${NumberFormat("#,##,###").format(difference.abs())})",
+                          style: AppTextStyles.bodyText(),
+                        ),
                       ],
                     ),
                   ),
@@ -1059,12 +1063,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
 
   Widget _buildCategoryWiseSalesCard() {
     final salesData = categoryWiseSalesController.salesData.value;
+
     if (categoryWiseSalesController.isLoading.value) {
       return _buildLoadingCard();
-    } else if (categoryWiseSalesController.errorMessage.value != null) {
-      return _buildErrorCard(
-        categoryWiseSalesController.errorMessage.value.toString(),
-      );
     } else if (salesData == null ||
         salesData.data?.categorySales == null ||
         salesData.data!.categorySales!.isEmpty) {
@@ -1124,7 +1125,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 SizedBox(width: SizeConfig.w(8)),
                 Flexible(
                   child: Text(
-                    "Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
+                    "Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)}",
                     style: AppTextStyles.bodyText(color: Colors.grey),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1142,6 +1143,11 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 final percentage = totalSalesAmount > 0
                     ? (categoryTotalAmount / totalSalesAmount) * 100
                     : 0.0;
+                final color = percentage >= 100
+                    ? Colors.green
+                    : percentage >= 80
+                    ? Colors.orange
+                    : Colors.red;
                 return Padding(
                   padding: EdgeInsets.only(bottom: SizeConfig.h(8)),
                   child: Column(
@@ -1156,13 +1162,23 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+
                           Flexible(
-                            child: Text(
-                              "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
-                              style: AppTextStyles.bodyText(
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  "${percentage.toStringAsFixed(1)}%",
+                                  style: AppTextStyles.captionText(),
+                                ),
+                                Text(
+                                  " ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
+                                  style: AppTextStyles.bodyText(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1171,9 +1187,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       LinearProgressIndicator(
                         value: percentage / 100,
                         backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.green[700]!,
-                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
                         minHeight: SizeConfig.h(6),
                         borderRadius: BorderRadius.circular(SizeConfig.w(3)),
                       ),
@@ -1394,41 +1408,191 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  Widget _buildIncentiveDashboardCard() {
+  Widget _buildBranchPerformanceCard() {
     return Obx(() {
-      if (subordinatesAggregationController.isLoading.value ||
-          totalSalesController.isLoading.value) {
-        return _buildLoadingCard();
-      } else if (subordinatesAggregationController.errorMessage.value != null ||
-          totalSalesController.errorMessage.value != null) {
-        return _buildErrorCard(
-          "${subordinatesAggregationController.errorMessage.value ?? ''}${totalSalesController.errorMessage.value ?? ''}",
-        );
-      }
+      if (totalSalesController.isLoading.value ||
+          subordinatesAggregationController.isLoading.value) {
+        return _buildLoadingCard(); // Assume this is defined elsewhere for loading state
+      } // Assume this is defined elsewhere
 
-      final myIncentive = totalSalesController.myIncentive.value ?? 0.0;
-      final target = 35000.0; // Example target value
-      final achievementPercentage = (myIncentive / target) * 100;
-      final remaining = target - myIncentive;
-
+      // Aggregate total branch performance from subordinates
       final data =
           subordinatesAggregationController.subordinatesResponse.value?.data;
       final List<AggModel.Subordinate> subordinates = data?.subordinates ?? [];
+      final totalBranchPerformance = subordinates.fold<double>(
+        0.0,
+        (sum, subordinate) =>
+            sum + (subordinate.sales.totalSales.totalAmount ?? 0),
+      );
+
+      final target = promiseController
+          .monthPromiseSum
+          .value; // Example monthly target for branch performance; replace with dynamic value
+      final performanceScore =
+          (totalBranchPerformance / target) *
+          100; // Percentage of target achieved
+      // final remaining = target - totalBranchPerformance;
+      // final totalPurchase =
+      //     totalSalesController.totalPurchaseAmountMonthly.value ?? 0.0;
+      // final customersServed =
+      //     totalSalesController.customersServedMonthly.value ?? 0;
+      // final netProfit = totalSalesController.netProfitMonthly.value ?? 0.0;
+
+      // Current date and time (12:08 PM IST on Friday, October 03, 2025)
+      final now = DateTime(2025, 10, 3, 12, 8); // Hardcoded for this example
+      final formattedDateTime = DateFormat(
+        'EEEE, MMMM dd, yyyy hh:mm a',
+      ).format(now);
+
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        elevation: 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(SizeConfig.w(12)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Branch Performance",
+                    style: AppTextStyles.subheadlineText(),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig.w(8),
+                      vertical: SizeConfig.h(4),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(SizeConfig.w(8)),
+                    ),
+                    child: Text(
+                      "Live Updates",
+                      style: AppTextStyles.captionText(color: Colors.green),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(SizeConfig.w(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Text(
+                  //   "Data as of: $formattedDateTime IST",
+                  //   style: AppTextStyles.captionText(color: Colors.grey),
+                  // ),
+                  // SizedBox(height: SizeConfig.h(16)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(width: SizeConfig.w(8)),
+                              Text(
+                                "Today's Sales",
+                                style: AppTextStyles.captionText(
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: SizeConfig.h(4)),
+                          Text(
+                            // "₹${NumberFormat("#,##,###").format(totalSalesController.salesData.value?.totalNetAmount)}",
+                            (totalSalesController
+                                            .salesData
+                                            .value
+                                            ?.totalNetAmount ??
+                                        0.0) >
+                                    0
+                                ? "₹${(NumberFormat('#,##,###').format(totalSalesController.salesData.value?.totalNetAmount))}"
+                                : "₹0",
+
+                            style: AppTextStyles.subheadlineText(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(width: SizeConfig.w(8)),
+                              Text(
+                                "Month To Date",
+                                style: AppTextStyles.captionText(
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: SizeConfig.h(4)),
+                          Text(
+                            (totalSalesController
+                                            .salesData
+                                            .value
+                                            ?.totalNetAmount ??
+                                        0.0) >
+                                    0
+                                ? "₹${(NumberFormat('#,##,###').format(totalSalesController.thisMonthSalesData.value?.totalNetAmount))}"
+                                : "₹0",
+                            style: AppTextStyles.subheadlineText(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: SizeConfig.h(16)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildIncentiveDashboardCard() {
+    return Obx(() {
+      // Check loading state for both controllers
+      if (subordinatesSalesVsPromiseController.isLoading.value ||
+          totalSalesController.isLoading.value) {
+        return _buildLoadingCard();
+      }
+
+      // Monthly metrics for "My Incentives" tab
+      final myIncentive = totalSalesController.myIncentiveThisMonth.value ?? 0.0;
+      final target = promiseController.monthPromiseSum.value; // Example monthly target
+      final achievementPercentage = (myIncentive / target) * 100;
+      final remaining = target - myIncentive;
+
+      // Team leaderboard data from subordinatesSalesVsPromiseController
+      final data = subordinatesSalesVsPromiseController
+          .subordinatesSalesVsPromiseData
+          .value
+          ?.data;
+      final List<SalesModel.Subordinate> subordinates =
+          data?.subordinates ?? [];
       final sortedSubordinates =
           subordinates
-              .where(
-                (subordinate) =>
-                    subordinate.sales?.totalSales?.totalAmount != null,
-              )
+              .where((subordinate) => subordinate.totalSales != null)
               .toList()
-            ..sort(
-              (a, b) => (b.sales!.totalSales!.totalAmount).compareTo(
-                a.sales!.totalSales!.totalAmount,
-              ),
-            );
+            ..sort((a, b) => (b.totalSales ?? 0).compareTo(a.totalSales ?? 0));
       final teamRank =
           sortedSubordinates.indexWhere(
-            (sub) => sub.sales!.totalSales!.totalAmount == myIncentive.toInt(),
+            (sub) => sub.totalSales == myIncentive.toInt(),
           ) +
           1;
 
@@ -1471,7 +1635,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Container(
-                  color: Colors.grey[200],
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                   child: TabBar(
                     dividerHeight: 0,
                     labelColor: Colors.blue[700],
@@ -1484,27 +1651,42 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                       horizontal: SizeConfig.w(16),
                       vertical: SizeConfig.h(8),
                     ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: SizeConfig.w(10),
-                      vertical: SizeConfig.h(4),
-                    ),
+                    padding: EdgeInsets.symmetric(vertical: SizeConfig.h(4)),
                     tabs: [
-                      Text("My Incentives", style: AppTextStyles.bodyText()),
-                      Text("Team Leaderboard", style: AppTextStyles.bodyText()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "My Incentives",
+                          style: AppTextStyles.bodyText(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "Team Leaderboard",
+                        style: AppTextStyles.bodyText(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               SizedBox(
-                height: SizeConfig.h(400), // Adjustable height for the tab view
+                height: SizeConfig.h(450), // Adjustable height for the tab view
                 child: TabBarView(
                   children: [
                     _buildMyIncentivesView(
-                      myIncentive,
-                      target,
-                      achievementPercentage,
-                      remaining,
-                      teamRank,
+                      myIncentive: myIncentive,
+                      target: target,
+                      achievementPercentage: achievementPercentage,
+                      remaining: remaining,
+                      teamRank: teamRank,
+                      totalPurchaseAmount:
+                          totalSalesController.totalPurchaseAmountMonthly.value,
+                      customersServed:
+                          totalSalesController.customersServedMonthly.value,
+                      netProfit: totalSalesController.netProfitMonthly.value,
                     ),
                     _buildTeamLeaderboardView(sortedSubordinates),
                   ],
@@ -1517,13 +1699,16 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     });
   }
 
-  Widget _buildMyIncentivesView(
-    double myIncentive,
-    double target,
-    double achievementPercentage,
-    double remaining,
-    int teamRank,
-  ) {
+  Widget _buildMyIncentivesView({
+    required double myIncentive,
+    required double target,
+    required double achievementPercentage,
+    required double remaining,
+    required int teamRank,
+    double? totalPurchaseAmount,
+    int? customersServed,
+    double? netProfit,
+  }) {
     return Padding(
       padding: EdgeInsets.all(SizeConfig.w(12)),
       child: Column(
@@ -1538,9 +1723,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   Row(
                     children: [
                       Icon(
-                        Icons.monetization_on,
+                        Icons.currency_rupee,
                         color: Colors.green[700],
-                        size: SizeConfig.w(20),
+                        size: SizeConfig.w(18),
                       ),
                       SizedBox(width: SizeConfig.w(8)),
                       Text(
@@ -1564,9 +1749,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   Row(
                     children: [
                       Icon(
-                        Icons.arrow_back,
+                        Icons.circle_outlined,
                         color: Colors.blue[700],
-                        size: SizeConfig.w(20),
+                        size: SizeConfig.w(18),
                       ),
                       SizedBox(width: SizeConfig.w(8)),
                       Text(
@@ -1577,7 +1762,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   ),
                   SizedBox(height: SizeConfig.h(4)),
                   Text(
-                    "₹${target.toStringAsFixed(0)}",
+                    "₹${NumberFormat("#,##,###").format(target)}",
                     style: AppTextStyles.subheadlineText(
                       fontWeight: FontWeight.bold,
                     ),
@@ -1616,39 +1801,12 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                   ),
                 ],
               ),
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Icon(
-              //           Icons.people,
-              //           color: Colors.green[700],
-              //           size: SizeConfig.w(20),
-              //         ),
-              //         SizedBox(width: SizeConfig.w(8)),
-              //         Text(
-              //           "Team Rank",
-              //           style: AppTextStyles.captionText(color: Colors.green),
-              //         ),
-              //       ],
-              //     ),
-              //     SizedBox(height: SizeConfig.h(4)),
-              //     Text(
-              //       teamRank > 0 ? "#$teamRank" : "Unranked",
-              //       style: AppTextStyles.subheadlineText(
-              //         fontWeight: FontWeight.bold,
-              //       ),
-              //     ),
-              //   ],
-              // ),
             ],
           ),
           SizedBox(height: SizeConfig.h(16)),
           Container(
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
-
               borderRadius: BorderRadius.circular(5),
             ),
             padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(10)),
@@ -1669,7 +1827,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                 ),
                 SizedBox(height: SizeConfig.h(8)),
                 Text(
-                  "Remaining: ₹${remaining.toStringAsFixed(0)} to reach target",
+                  "Remaining: ₹${NumberFormat('#,##,###').format(remaining)} to reach target",
                   style: AppTextStyles.captionText(color: Colors.grey),
                 ),
               ],
@@ -1681,7 +1839,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   }
 
   Widget _buildTeamLeaderboardView(
-    List<AggModel.Subordinate> sortedSubordinates,
+    List<SalesModel.Subordinate> sortedSubordinates,
   ) {
     return SingleChildScrollView(
       child: Column(
@@ -1694,50 +1852,105 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
             itemBuilder: (context, index) {
               final subordinate = sortedSubordinates[index];
               final rank = index + 1;
-              final sales = subordinate.sales.totalSales.totalAmount ?? 0;
-              final incentive = _calculateIncentive(sales.toDouble());
+              final totalSales = subordinate.totalSales ?? 0;
+              final totalPromise = subordinate.totalPromise ?? 0;
+              final percentage = totalPromise > 0
+                  ? (totalSales / totalPromise) * 100
+                  : 0.0;
+              Color progressColor = Colors.grey;
+              if (percentage >= 80) {
+                progressColor = Colors.green;
+              } else if (percentage >= 50) {
+                progressColor = Colors.orange;
+              } else {
+                progressColor = Colors.red;
+              }
 
               return Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(SizeConfig.w(5)),
                 child: Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey),
-                    // color: rank <= 3 ? Colors.green[50] : Colors.transparent,
                     borderRadius: BorderRadius.circular(SizeConfig.w(5)),
                   ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: rank == 1
-                          ? Colors.yellow[700]
-                          : rank == 2
-                          ? Colors.grey[400]
-                          : rank == 3
-                          ? Colors.brown[400]
-                          : Colors.transparent,
-                      child: Text(
-                        '#$rank',
-                        style: TextStyle(
-                          color: rank <= 3 ? Colors.black : Colors.grey[600],
-                          fontWeight: FontWeight.bold,
+                  child: Padding(
+                    padding: EdgeInsets.all(SizeConfig.w(8)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+
+                                  backgroundColor: rank == 1
+                                      ? Colors.yellow[700]
+                                      : rank == 2
+                                      ? Colors.grey[400]
+                                      : rank == 3
+                                      ? Colors.brown[400]
+                                      : Colors.transparent,
+                                  child: Text(
+                                    '#$rank',
+                                    style: TextStyle(
+                                      color: rank <= 3
+                                          ? Colors.black
+                                          : Colors.grey[600],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: SizeConfig.w(8)),
+                                Text(
+                                  subordinate.name ?? 'N/A',
+                                  style: AppTextStyles.bodyText(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              "₹${NumberFormat('#,##,###').format(totalSales)}",
+                              style: AppTextStyles.subheadlineText(
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    title: Text(
-                      subordinate.name ?? 'N/A',
-                      style: AppTextStyles.bodyText(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Sales: ₹${NumberFormat('#,##,###').format(sales)}',
-                      style: AppTextStyles.bodyText(color: Colors.grey),
-                    ),
-                    trailing: Text(
-                      '₹${incentive.toStringAsFixed(0)} Incentive',
-                      style: TextStyle(
-                        color: Colors.green[700],
-                        fontWeight: FontWeight.bold,
-                      ),
+                        SizedBox(height: SizeConfig.h(8)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Target: ₹${NumberFormat('#,##,###').format(totalPromise)}",
+                              style: AppTextStyles.captionText(),
+                            ),
+                            Text(
+                              "${percentage.toStringAsFixed(1)}%",
+                              style: AppTextStyles.captionText(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: SizeConfig.h(4)),
+                        LinearProgressIndicator(
+                          value: percentage / 100,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            progressColor,
+                          ),
+                          minHeight: SizeConfig.h(8),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        SizedBox(height: SizeConfig.h(4)),
+                        Text(
+                          "Remaining: ₹${NumberFormat('#,##,###').format(totalPromise - totalSales)}",
+                          style: AppTextStyles.captionText(),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1750,16 +1963,15 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   }
 
   double _calculateIncentive(double sales) {
-    // Example logic: Adjust to match your incentive structure
-    double incentive = sales * 0.1; // 10% of sales as a starting point
-    // if (incentive < 500) return 500;
-    // if (incentive > 12000) return 12000;
+    double incentive = sales * 0.01;
+
     return incentive;
   }
 
   Widget _buildLoadingCard() => Card(
+    color: Colors.white,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(SizeConfig.w(12)),
+      borderRadius: BorderRadius.circular(SizeConfig.w(5)),
     ),
     child: Padding(
       padding: EdgeInsets.all(SizeConfig.w(16)),
@@ -1827,8 +2039,6 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
   Widget _buildArticleWithMrpAndStockCard() {
     return Obx(() {
       if (articleController.isLoading.value) return _buildLoadingCard();
-      if (articleController.errorMessage.value.isNotEmpty)
-        return _buildErrorCard(articleController.errorMessage.value);
 
       // Filter articles based on search query
       final allArticles = articleController.articles
@@ -1846,19 +2056,21 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
           .toList();
 
       // Limit to 10 articles for display
-      final displayArticles = allArticles.take(10).toList();
+      final displayArticles = allArticles.take(5).toList();
 
-      if (allArticles.isEmpty && _searchQuery.value.isEmpty)
+      if (allArticles.isEmpty && _searchQuery.value.isEmpty) {
         return _buildEmptyCard("No articles available.");
-      if (allArticles.isEmpty)
+      }
+      if (allArticles.isEmpty) {
         return _buildEmptyCard("No articles match your search.");
+      }
 
       // Calculate total price and total stock for all filtered articles
-      final totalPrice = allArticles.fold<double>(
+      final totalPrice = articleController.articles.fold<double>(
         0.0,
         (sum, article) => sum + (article.itemMRP ?? 0.0),
       );
-      final totalStock = allArticles.fold<int>(
+      final totalStock = articleController.articles.fold<int>(
         0,
         (sum, article) => sum + (article.stockQty ?? 0),
       );
@@ -1874,7 +2086,7 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
               // Title
               Row(
                 children: [
-                  Icon(Icons.search, size: SizeConfig.w(20)),
+                  // Icon(Icons.search, size: SizeConfig.w(20)),
                   Text(
                     "Articles with MRP and Stock",
                     style: AppTextStyles.subheadlineText(),
@@ -1882,22 +2094,76 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                 ],
               ),
               SizedBox(height: SizeConfig.h(12)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Total Price: ₹${totalPrice.toStringAsFixed(2)}",
-                    style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    "Total Stock: $totalStock",
-                    style: AppTextStyles.bodyText(fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  spacing: SizeConfig.w(10),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        // border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      height: 70,
+                      width: SizeConfig.w(160),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "₹${NumberFormat("#,##,##").format(totalPrice)}",
+                              style: AppTextStyles.subheadlineText(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Total Price",
+                              style: AppTextStyles.captionText(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        // border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      height: 70,
+                      width: SizeConfig.w(155),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              NumberFormat("#,##,##").format(totalStock),
+                              style: AppTextStyles.subheadlineText(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            Text(
+                              "Total Stock",
+                              style: AppTextStyles.captionText(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              // Search Bar
               SizedBox(
-                height: 40,
+                height: 30,
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
@@ -1931,9 +2197,9 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
                   child: DataTable(
-                    columnSpacing: SizeConfig.w(8),
-                    dataRowHeight: SizeConfig.h(40),
-                    headingRowHeight: SizeConfig.h(30),
+                    columnSpacing: SizeConfig.w(10),
+                    dataRowHeight: SizeConfig.h(60),
+                    headingRowHeight: SizeConfig.h(40),
                     horizontalMargin: SizeConfig.w(6),
                     columns: [
                       _buildTableHeader("Article ID", flex: 1),
@@ -1965,7 +2231,7 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                               ),
                               DataCell(
                                 Text(
-                                  "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
+                                  "₹${NumberFormat("#,##,##").format(article.itemMRP)}",
                                   style: AppTextStyles.bodyText(),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -2011,8 +2277,9 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
 
   Widget _buildLoadingCard() {
     return Card(
+      color: Colors.white,
       child: Padding(
-        padding: EdgeInsets.all(SizeConfig.w(12)),
+        padding: EdgeInsets.all(SizeConfig.w(5)),
         child: Center(child: CircularProgressIndicator()),
       ),
     );

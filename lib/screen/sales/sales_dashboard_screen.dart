@@ -146,10 +146,10 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
   Widget build(BuildContext context) {
     SizeConfig.init(context);
     final horizontalPadding = SizeConfig.isDesktop
-        ? SizeConfig.w(60)
-        : SizeConfig.isTablet
         ? SizeConfig.w(40)
-        : SizeConfig.w(12);
+        : SizeConfig.isTablet
+        ? SizeConfig.w(20)
+        : SizeConfig.w(8);
 
     // final horizontalPadding = MediaQuery.of(context).size.width * .02;
     // Get user data from LoginController
@@ -157,7 +157,6 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
       final userName =
           loginController.loginResponse.value?.data!.user.name ?? "Loading...";
       // Removed unused userId
-      // final reportingName = reportingController.manager.value?? "Loading...";
       final reportingName = reportingController.manager.value ?? "Loading...";
       // Get sales data from TotalSalesController
       final totalNetAmount =
@@ -222,98 +221,94 @@ class _SalesAgentDashBoardState extends State<SalesAgentDashBoard> {
         ),
         body: LayoutBuilder(
           builder: (context, constraints) {
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: SizeConfig.isDesktop
-                      ? SizeConfig.w(1100)
-                      : double.infinity,
-                ),
-                child: RefreshIndicator(
-                  onRefresh: _loadDashboardData,
-                  child: SingleChildScrollView(
-                    controller: _mainScrollController,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                      // vertical: SizeConfig.h(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Container(
-                        //   width: double.infinity,
-                        //   padding: EdgeInsets.all(SizeConfig.w(10)),
-                        //   margin: EdgeInsets.symmetric(
-                        //     vertical: SizeConfig.h(4),
-                        //   ),
-                        //   decoration: BoxDecoration(
-                        //     color: Colors.white,
-                        //     borderRadius: BorderRadius.circular(10),
-                        //     boxShadow: const [
-                        //       BoxShadow(
-                        //         color: Colors.black12,
-                        //         blurRadius: 4,
-                        //         offset: Offset(0, 2),
-                        //       ),
-                        //     ],
-                        //   ),
-                        //   child: Text(
-                        //     "Reporting : $reportingName",
-                        //     style: AppTextStyles.bodyText(),
-                        //   ),
-                        // ),
-                        // SizedBox(height: SizeConfig.h(4)),
-                        Wrap(
-                          // spacing: SizeConfig.w(6),
-                          // runSpacing: SizeConfig.h(6),
-                          children: [
-                            _buildInfoCard(
-                              1,
-                              "Total Sales Amount ($salesDateStr)",
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: SizeConfig.isDesktop
+                    ? SizeConfig.w(1100)
+                    : double.infinity,
+              ),
+              child: RefreshIndicator(
+                onRefresh: _loadDashboardData,
+                child: SingleChildScrollView(
+                  controller: _mainScrollController,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    // vertical: SizeConfig.h(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Container(
+                      //   width: double.infinity,
+                      //   padding: EdgeInsets.all(SizeConfig.w(10)),
+                      //   margin: EdgeInsets.symmetric(
+                      //     vertical: SizeConfig.h(4),
+                      //   ),
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.white,
+                      //     borderRadius: BorderRadius.circular(10),
+                      //     boxShadow: const [
+                      //       BoxShadow(
+                      //         color: Colors.black12,
+                      //         blurRadius: 4,
+                      //         offset: Offset(0, 2),
+                      //       ),
+                      //     ],
+                      //   ),
+                      //   child: Text(
+                      //     "Reporting : $reportingName",
+                      //     style: AppTextStyles.bodyText(),
+                      //   ),
+                      // ),
+                      // SizedBox(height: SizeConfig.h(4)),
+                      Wrap(
+                        // spacing: SizeConfig.w(6),
+                        // runSpacing: SizeConfig.h(6),
+                        children: [
+                          _buildInfoCard(
+                            1,
+                            "Total Sales Amount ($salesDateStr)",
 
-                              "₹${NumberFormat('#,##,###').format(totalNetAmount)}",
-                              Icons.currency_rupee,
-                              Colors.green.shade400,
-                            ),
-                            _buildInfoCard(
+                            "₹${NumberFormat('#,##,###').format(totalNetAmount)}",
+                            Icons.currency_rupee,
+                            Colors.green.shade400,
+                          ),
+                          _buildInfoCard(
+                            1,
+                            "Total Sales Quantity ($salesDateStr)",
+                            "$totalNetSlsQty Qty",
+                            Icons.shopping_cart_outlined,
+                            Colors.blue,
+                          ),
+                          Obx(() {
+                            final incentiveValue =
+                                totalSalesController.myIncentive.value ?? 0.0;
+                            return _buildInfoCard(
                               1,
-                              "Total Sales Quantity ($salesDateStr)",
-                              "$totalNetSlsQty Qty",
-                              Icons.shopping_cart_outlined,
-                              Colors.blue,
-                            ),
-                            Obx(() {
-                              final incentiveValue =
-                                  totalSalesController.myIncentive.value ?? 0.0;
-                              return _buildInfoCard(
-                                1,
-                                "My Incentive ($salesDateStr)",
-                                incentiveValue > 0
-                                    ? "₹${NumberFormat("#,##,###").format(incentiveValue)}"
-                                    : "₹0",
-                                Icons.trending_up,
-                                incentiveValue > 0
-                                    ? Colors.purple
-                                    : Colors.grey,
-                              );
-                            }),
-                          ],
-                        ),
-                        // SizedBox(height: SizeConfig.h(4)),
-                        _buildPromiseVsActualCard(
-                          filteredDailyValues,
-                          totalSetsLocal,
-                          dateRange,
-                        ),
-                        SizedBox(height: SizeConfig.h(2)),
-                        highestSellingProduct(context),
-                        SizedBox(height: SizeConfig.h(2)),
-                        PhaseTwoInfoWidget(),
-                        SizedBox(height: SizeConfig.h(2)),
-                        // _buildSubordinatesSalesVsPromiseCard(),
-                        SizedBox(height: SizeConfig.h(30)),
-                      ],
-                    ),
+                              "My Incentive ($salesDateStr)",
+                              incentiveValue > 0
+                                  ? "₹${NumberFormat("#,##,###").format(incentiveValue)}"
+                                  : "₹0",
+                              Icons.trending_up,
+                              incentiveValue > 0 ? Colors.purple : Colors.grey,
+                            );
+                          }),
+                        ],
+                      ),
+                      // SizedBox(height: SizeConfig.h(4)),
+                      _buildPromiseVsActualCard(
+                        filteredDailyValues,
+                        totalSetsLocal,
+                        dateRange,
+                      ),
+                      SizedBox(height: SizeConfig.h(2)),
+                      highestSellingProduct(context),
+                      SizedBox(height: SizeConfig.h(2)),
+                      PhaseTwoInfoWidget(),
+                      SizedBox(height: SizeConfig.h(2)),
+                      // _buildSubordinatesSalesVsPromiseCard(),
+                      SizedBox(height: SizeConfig.h(30)),
+                    ],
                   ),
                 ),
               ),
@@ -1100,15 +1095,7 @@ class PhaseTwoInfoWidget extends StatelessWidget {
       final items = data?.data ?? [];
 
       if (isLoading) {
-        return Padding(
-          padding: EdgeInsets.all(SizeConfig.w(12)),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      } else if (error != null) {
-        return Padding(
-          padding: EdgeInsets.all(SizeConfig.w(12)),
-          child: Text(error, style: AppTextStyles.bodyText(color: Colors.red)),
-        );
+        return Center(child: _buildLoadingCard());
       } else if (items.isEmpty) {
         return Padding(
           padding: EdgeInsets.all(SizeConfig.w(12)),
@@ -1118,7 +1105,6 @@ class PhaseTwoInfoWidget extends StatelessWidget {
           ),
         );
       }
-
       final currentPhaseNumber = getCurrentPhaseNumber();
       SalesComparisonByPhaseItem currentPhaseItem = items.first;
       // Prefer matching by explicit phase label
@@ -1370,4 +1356,15 @@ class PhaseTwoInfoWidget extends StatelessWidget {
       );
     });
   }
+
+  Widget _buildLoadingCard() => Card(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(SizeConfig.w(5)),
+    ),
+    child: Padding(
+      padding: EdgeInsets.all(SizeConfig.w(16)),
+      child: Center(child: CircularProgressIndicator()),
+    ),
+  );
 }

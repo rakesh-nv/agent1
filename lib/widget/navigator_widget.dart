@@ -9,7 +9,7 @@ import 'package:mbindiamy/screen/profile.dart';
 import 'package:mbindiamy/screen/login.dart';
 import 'package:mbindiamy/screen/sales/stafNotInBranch/purchase/regional_purchase_head_dashboard.dart';
 import 'package:mbindiamy/screen/sales/stafNotInBranch/regional_manager_dashboard.dart';
-import 'package:mbindiamy/screen/sales/stafInBranch/branch_manager_dashboard.dart';
+import 'package:mbindiamy/screen/sales/stafInBranch/branch_manager_dashboard.dart' hide SalesAgentDashBoard;
 
 // 🔹 Utils
 import 'package:mbindiamy/style/appstyle.dart';

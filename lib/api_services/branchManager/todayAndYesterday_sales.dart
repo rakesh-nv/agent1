@@ -87,7 +87,7 @@ class SalesApiService {
     }
   }
 
-  Future<SalesDataResponse> thisMonth() async {
+  Future<SalesDataResponse> fetchThisMonthSales() async {
     try {
       // Get the token from Hive
       final box = Hive.box('myBox');
@@ -111,7 +111,7 @@ class SalesApiService {
         },
         body: requestBody,
       );
-      debugPrint('API Response: ${response.statusCode} - ${response.body}');
+      debugPrint('1--------API Response---------: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);

@@ -29,6 +29,8 @@ class SubordinatesSalesVsPromiseController extends GetxController {
       errorMessage.value = null;
 
       final data = await _apiServices.getSubordinatesSalesVsPromise();
+
+
       if (data != null) {
         subordinatesSalesVsPromiseData.value = data;
       } else {

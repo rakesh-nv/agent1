@@ -20,9 +20,11 @@ class SalesComparisonController extends GetxController {
   var myIncentive = Rx<double?>(null);
   var incentiveError = Rx<String?>(null);
 
-  SalesComparisonController({SalesApiService? apiService, Connectivity? connectivity})
-    : _apiService = apiService ?? SalesApiService(),
-      _connectivity = connectivity ?? Connectivity() {
+  SalesComparisonController({
+    SalesApiService? apiService,
+    Connectivity? connectivity,
+  }) : _apiService = apiService ?? SalesApiService(),
+       _connectivity = connectivity ?? Connectivity() {
     _initConnectivity();
   }
 
@@ -47,7 +49,9 @@ class SalesComparisonController extends GetxController {
       }
 
       _connectivitySubscription =
-          _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) {
+          _connectivity.onConnectivityChanged.listen((
+                List<ConnectivityResult> results,
+              ) {
                 if (results.isNotEmpty) {
                   _updateConnectionStatus(results.first);
                 }
@@ -64,8 +68,8 @@ class SalesComparisonController extends GetxController {
       hasConnection.value = newStatus;
 
       if (hasConnection.value && errorMessage.value != null) {
-        // fetchTodaysSales(); // Re-fetch data if connection is restored
-        // fetchYesterdaySales();
+        fetchTodaysSales(); // Re-fetch data if connection is restored
+        fetchYesterdaySales();
       }
     }
   }

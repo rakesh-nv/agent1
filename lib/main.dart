@@ -33,7 +33,9 @@ import 'package:mbindiamy/utils/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'controllers/profile_controller.dart';
+import 'controllers/regionalManager/departmentSales_controller.dart';
 import 'controllers/salesAgentController/currentPhaseController.dart';
+import 'controllers/weeklySalesTrend_controller.dart';
 
 void main() async {
   // WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +51,7 @@ void main() async {
       connectivity: Connectivity(),
     ),
   );
+  Get.put(DepartmentSalesController());
   Get.put(SubordinatesAggregationController());
   Get.put(BranchManagerSalesVsPromiseController());
   Get.put(SalesByPhaseController());
@@ -62,6 +65,7 @@ void main() async {
   Get.put(SubordinatesSalesVsPromiseController());
   Get.put(ProfileController());
   Get.put(ArticleController());
+  Get.put(WeeklySalesTrendController());
   runApp(const MyApp());
 }
 

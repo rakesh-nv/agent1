@@ -2,22 +2,28 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mbindiamy/controllers/branch_manager_controller/categoryWiseSalesController.dart';
+import 'package:mbindiamy/controllers/regionalManager/departmentSales_controller.dart';
 import 'package:mbindiamy/widget/appbar_widget.dart';
 
 import '../../../controllers/ArticleWithMrpAndStockController.dart';
 import '../../../controllers/branch_manager_controller/sales_comparison_controller.dart';
 import '../../../controllers/login_controller.dart';
 import '../../../controllers/reporting_controller.dart';
+import '../../../controllers/subordinates_sales_vs_promise_controller.dart';
 import '../../../controllers/top_articles_controller.dart';
 import '../../../controllers/total_sales_controller.dart';
+import '../../../controllers/weeklySalesTrend_controller.dart';
 import '../../../model/top_artical_model.dart';
+
 // import '../../../style/appstyle.dart';
+import '../../../model/subordinates_sales_vs_promise_model.dart' as SalesModel;
 
 import '../../../model/top_artical_model.dart' as TopArticleData;
 import '../../../style/appTextStyle.dart';
 import '../../../style/siseConfig.dart';
 import '../../../widget/navigator_widget.dart';
 import 'package:get/get.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class RegionalManagerDashboard extends StatefulWidget {
   const RegionalManagerDashboard({super.key});
@@ -31,8 +37,9 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
   int currentSet = 0; // For Promise vs Actual pagination
   int currentIndex = 0; // For Top Articles pagination
   final PageController _pageController = PageController();
-  final ScrollController _mainScrollController =
-      ScrollController(); // Added for main scrollbar
+
+  // final ScrollController _mainScrollController =
+  //     ScrollController(); // Added for main scrollbar
 
   final LoginController loginController = Get.find<LoginController>();
   final ReportingManagerController reportingController =
@@ -41,12 +48,17 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
       Get.find<TotalSalesController>();
   final SalesComparisonController salesComparisonController =
       Get.find<SalesComparisonController>();
-
+  final SubordinatesSalesVsPromiseController
+  subordinatesSalesVsPromiseController = Get.find();
   final CategoryWiseSalesController categoryWiseSalesController =
       Get.find<CategoryWiseSalesController>();
   final TopArticlesController topArticlesController =
       Get.find<TopArticlesController>();
 
+  final WeeklySalesTrendController weeklySalesTrendController =
+      Get.find<WeeklySalesTrendController>();
+
+  final DepartmentSalesController departmentSalesController = Get.find<DepartmentSalesController>();
   // final PromiseActualController promiseController = Get.find<PromiseActualController>();
 
   @override
@@ -78,6 +90,17 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         categoryWiseSalesController.fetchCategoryWiseSales().catchError((e) {
           debugPrint("Yesterday's Sales error: $e");
         }),
+        weeklySalesTrendController.loadWeeklySalesTrend().catchError((e) {
+          debugPrint("loadWeeklySalesTrend Sales error: $e");
+        }),
+        departmentSalesController.loadWeeklySalesTrend().catchError((e) {
+          debugPrint("loadWeeklySalesTrend Sales error: $e");
+        }),
+        subordinatesSalesVsPromiseController
+            .fetchSubordinatesSalesVsPromise()
+            .catchError(
+              (e) => debugPrint("fetchSubordinatesSalesVsPromise error"),
+            ),
         topArticlesController.loadTopArticles().catchError((e) {
           debugPrint("loadTopArticles error");
         }),
@@ -92,7 +115,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
   @override
   void dispose() {
     _pageController.dispose();
-    _mainScrollController.dispose(); // Dispose main scroll controller
+    // _mainScrollController.dispose(); // Dispose main scroll controller
     super.dispose();
   }
 
@@ -136,10 +159,10 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
   Widget build(BuildContext context) {
     SizeConfig.init(context);
     final horizontalPadding = SizeConfig.isDesktop
-        ? SizeConfig.w(60)
-        : SizeConfig.isTablet
         ? SizeConfig.w(40)
-        : SizeConfig.w(12);
+        : SizeConfig.isTablet
+        ? SizeConfig.w(20)
+        : SizeConfig.w(8);
 
     return Obx(() {
       // // late final loginResponse = loginController.loginResponse.value;
@@ -252,7 +275,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                       1,
                       "My Incentive ($salesDateStr)",
                       incentiveValue > 0
-                          ? "₹${incentiveValue.toStringAsFixed(2)}"
+                          ? "₹${NumberFormat("#,##,###").format(incentiveValue)}"
                           : "₹0",
                       Icons.trending_up,
                       incentiveValue > 0 ? Colors.purple : Colors.grey,
@@ -262,9 +285,12 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                   // Sales Comparison Card
                   _buildSalesComparisonCard(),
                   _buildBranchPerformanceCard(),
+                  _buildSubordinatesSalesVsPromiseCard(),
                   // Category-wise Sales Card
                   _buildCategoryWiseSalesCard(),
+                  RegionalSalesTrendsCard(),
                   // Highest Selling Product
+                  _buildDepartmentWiseSales(),
                   highestSellingProduct(context),
                   ArticleWithMrpAndStockCard(),
                   SizedBox(height: SizeConfig.h(16)),
@@ -275,6 +301,310 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         ),
       );
     });
+  }
+
+  Widget _buildSubordinatesSalesVsPromiseCard() {
+    return Obx(() {
+      if (subordinatesSalesVsPromiseController.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      } else if (subordinatesSalesVsPromiseController
+              .subordinatesSalesVsPromiseData
+              .value
+              ?.data ==
+          null) {
+        return const SizedBox.shrink(); // show nothing if no data
+      }
+
+      final data = subordinatesSalesVsPromiseController
+          .subordinatesSalesVsPromiseData
+          .value!
+          .data!;
+      final subordinates = data.subordinates;
+
+      if (subordinates == null || subordinates.isEmpty) {
+        return const SizedBox.shrink(); // 🔹 don't show anything
+      }
+
+      // Calculate total sales and total promise across all subordinates
+      double totalSales = 0.0;
+      double totalPromise = 0.0;
+      for (var subordinate in subordinates) {
+        totalSales += subordinate.totalSales ?? 0;
+        totalPromise += subordinate.totalPromise ?? 0;
+      }
+      final percentage = totalPromise > 0
+          ? (totalSales / totalPromise) * 100
+          : 0.0;
+
+      return Card(
+        color: Colors.white,
+        // margin: EdgeInsets.symmetric(vertical: SizeConfig.h(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        child: Padding(
+          padding: EdgeInsets.all(SizeConfig.w(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.emoji_events_outlined),
+                  Text(
+                    "Team Incentive Dashboard",
+                    style: AppTextStyles.subheadlineText(),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadiusDirectional.circular(5),
+                    color: Colors.green.withOpacity(0.2),
+                  ),
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "₹${NumberFormat("#,##,###").format(totalSales)}",
+                          style: AppTextStyles.subheadlineText(
+                            color: Colors.green,
+                          ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Regional Team Performance",
+                              style: AppTextStyles.subheadlineText(),
+                            ),
+                            Text(
+                              "${percentage.toStringAsFixed(1)}%",
+                              style: AppTextStyles.bodyText(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        LinearProgressIndicator(
+                          value: percentage / 100,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.green,
+                          ),
+                          minHeight: SizeConfig.h(12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Target: ₹${NumberFormat('#,##,###').format(totalPromise)}",
+                              style: AppTextStyles.captionText(),
+                            ),
+                            Text(
+                              "Remaining: ₹${NumberFormat('#,##,###').format(totalPromise - totalSales)}",
+                              style: AppTextStyles.captionText(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                height: 300,
+                child: Scrollbar(
+                  thumbVisibility: true, // Always show scrollbar
+                  thickness: 7, // Adjust thickness if needed
+                  radius: const Radius.circular(8), // Rounded scrollbar
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: SingleChildScrollView(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: subordinates.length,
+                        itemBuilder: (context, index) {
+                          final subordinate = subordinates[index];
+                          return _buildSubordinateTile(subordinate);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildSubordinateTile(SalesModel.Subordinate subordinate) {
+    final totalSales = subordinate.totalSales ?? 0;
+    final totalPromise = subordinate.totalPromise ?? 0;
+    final percentage = totalPromise > 0
+        ? (totalSales / totalPromise) * 100
+        : 0.0;
+    Color progressColor = Colors.grey;
+    if (percentage >= 80) {
+      progressColor = Colors.green;
+    } else if (percentage >= 50) {
+      progressColor = Colors.orange;
+    } else {
+      progressColor = Colors.red;
+    }
+    return Padding(
+      padding: EdgeInsets.only(bottom: SizeConfig.h(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(SizeConfig.w(8)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "₹${NumberFormat("#,##,###").format(totalSales)}",
+                    style: AppTextStyles.subheadlineText(color: Colors.green),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        subordinate.name ?? 'N/A',
+                        style: AppTextStyles.subheadlineText(),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          "${percentage.toStringAsFixed(1)}%",
+                          style: TextStyle(
+                            fontSize: SizeConfig.w(12),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: SizeConfig.h(4)),
+                  // Text(
+                  //   "Email: ${subordinate.email ?? 'N/A'}",
+                  //   style: TextStyle(
+                  //     fontSize: SizeConfig.w(12),
+                  //     color: Colors.grey[600],
+                  //   ),
+                  // ),
+                  SizedBox(height: SizeConfig.h(8)),
+                  LinearProgressIndicator(
+                    value: percentage / 100,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                    minHeight: SizeConfig.h(8),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Target: ₹${NumberFormat('#,##,###').format(totalPromise)}",
+                        style: AppTextStyles.captionText(),
+                      ),
+                      Text(
+                        "Remaining: ₹${NumberFormat('#,##,###').format(totalPromise - totalSales)}",
+                        style: AppTextStyles.captionText(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Padding(
+            //   padding: EdgeInsets.symmetric(horizontal: SizeConfig.w(16)),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       Text(
+            //         "Branches:",
+            //         style: TextStyle(
+            //           fontSize: SizeConfig.w(14),
+            //           fontWeight: FontWeight.w500,
+            //         ),
+            //       ),
+            //       ListView.builder(
+            //         shrinkWrap: true,
+            //         physics: const NeverScrollableScrollPhysics(),
+            //         itemCount: subordinate.branches?.length ?? 0,
+            //         itemBuilder: (context, idx) {
+            //           final branch = subordinate.branches![idx];
+            //           final num branchPromise = branch.promised ?? 0;
+            //           final num branchActualSales = branch.actualSales ?? 0;
+            //           final double branchPercentage = branchPromise > 0
+            //               ? (branchActualSales / branchPromise) * 100
+            //               : 0.0;
+            //           Color branchProgressColor = Colors.grey;
+            //           if (branchPercentage >= 80) {
+            //             branchProgressColor = Colors.green;
+            //           } else if (branchPercentage >= 50) {
+            //             branchProgressColor = Colors.orange;
+            //           } else {
+            //             branchProgressColor = Colors.red;
+            //           }
+            //           return Padding(
+            //             padding: EdgeInsets.only(
+            //               left: SizeConfig.w(16),
+            //               top: SizeConfig.h(4),
+            //             ),
+            //             child: Column(
+            //               crossAxisAlignment: CrossAxisAlignment.start,
+            //               children: [
+            //                 Text(
+            //                   "${branch.branchAlias}: ₹${NumberFormat('#,##,###').format(branchActualSales)} / ₹${NumberFormat('#,##,###').format(branchPromise)}",
+            //                   style: TextStyle(fontSize: SizeConfig.w(12)),
+            //                 ),
+            //                 LinearProgressIndicator(
+            //                   value: branchPercentage / 100,
+            //                   backgroundColor: Colors.grey[200],
+            //                   valueColor: AlwaysStoppedAnimation<Color>(
+            //                     branchProgressColor,
+            //                   ),
+            //                   minHeight: SizeConfig.h(6),
+            //                   borderRadius: BorderRadius.circular(3),
+            //                 ),
+            //                 Align(
+            //                   alignment: Alignment.centerRight,
+            //                   child: Text(
+            //                     "${branchPercentage.toStringAsFixed(1)}%",
+            //                     style: TextStyle(
+            //                       fontSize: SizeConfig.w(10),
+            //                       color: branchProgressColor,
+            //                     ),
+            //                   ),
+            //                 ),
+            //               ],
+            //             ),
+            //           );
+            //         },
+            //       ),
+            //       Divider(height: SizeConfig.h(24)),
+            //     ],
+            //   ),
+            // ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildBranchPerformanceCard() {
@@ -288,19 +618,6 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
-          ),
-        );
-      } else if (categoryWiseSalesController.errorMessage.value != null) {
-        return Card(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: Text(
-                "Error: ${categoryWiseSalesController.errorMessage.value}",
-              ),
-            ),
           ),
         );
       } else if (salesData == null ||
@@ -409,6 +726,14 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                   final percentage = totalSalesAmount > 0
                       ? (categoryTotalAmount / totalSalesAmount) * 100
                       : 0.0;
+                  Color progressColor = Colors.grey;
+                  if (percentage >= 80) {
+                    progressColor = Colors.green;
+                  } else if (percentage >= 50) {
+                    progressColor = Colors.orange;
+                  } else {
+                    progressColor = Colors.red;
+                  }
                   return Padding(
                     padding: EdgeInsets.only(bottom: SizeConfig.h(8)),
                     child: Column(
@@ -421,13 +746,23 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                               // style: TextStyle(fontSize: SizeConfig.w(14)),
                               style: AppTextStyles.bodyText(),
                             ),
-                            Text(
-                              "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
-                              // style: TextStyle(
-                              //   fontSize: SizeConfig.w(14),
-                              //   fontWeight: FontWeight.w600,
-                              // ),
-                              style: AppTextStyles.bodyText(),
+                            Row(
+                              spacing: 5,
+                              children: [
+                                Text(
+                                  "${percentage.toStringAsFixed(1)}%",
+
+                                  style: AppTextStyles.captionText(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  "₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
+                                  style: AppTextStyles.bodyText(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -466,19 +801,6 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
             child: Center(child: CircularProgressIndicator()),
           ),
         );
-      } else if (categoryWiseSalesController.errorMessage.value != null) {
-        return Card(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: Text(
-                "Error: ${categoryWiseSalesController.errorMessage.value}",
-              ),
-            ),
-          ),
-        );
       } else if (salesData == null ||
           salesData.data?.categorySales == null ||
           salesData.data!.categorySales!.isEmpty) {
@@ -508,19 +830,26 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.bar_chart,
-                        size: SizeConfig.w(20),
-                        color: Colors.grey[700],
-                      ),
-                      SizedBox(width: SizeConfig.w(8)),
-                      Text(
-                        "Regional Category Sales",
-                        style: AppTextStyles.subheadlineText(),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.bar_chart,
+                          size: SizeConfig.w(20),
+                          color: Colors.grey[700],
+                        ),
+                        SizedBox(width: SizeConfig.w(8)),
+                        Flexible(
+                          child: Text(
+                            "Regional Category Sales",
+                            maxLines: 2,
+                            style: AppTextStyles.subheadlineText(),
+                            overflow:
+                                TextOverflow.ellipsis, // 👈 avoids overflow
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -534,6 +863,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                     child: Text(
                       "Total: ₹${NumberFormat('#,##,###').format(totalSalesAmount)}",
                       style: AppTextStyles.captionText(color: Colors.grey),
+                      textAlign: TextAlign.right,
                     ),
                   ),
                 ],
@@ -568,7 +898,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                   ),
                   SizedBox(width: SizeConfig.w(8)),
                   Text(
-                    "Total Net Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)} Qty",
+                    "Sales Quantity: ${NumberFormat('#,##,###').format(salesData.data?.totalNetSlsQty ?? 0)}",
                     style: TextStyle(
                       fontSize: SizeConfig.w(14),
                       color: Colors.grey[800],
@@ -587,6 +917,14 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                   final percentage = totalSalesAmount > 0
                       ? (categoryTotalAmount / totalSalesAmount) * 100
                       : 0.0;
+                  Color progressColor = Colors.grey;
+                  if (percentage >= 80) {
+                    progressColor = Colors.green;
+                  } else if (percentage >= 50) {
+                    progressColor = Colors.orange;
+                  } else {
+                    progressColor = Colors.red;
+                  }
                   return Padding(
                     padding: EdgeInsets.only(bottom: SizeConfig.h(8)),
                     child: Column(
@@ -596,16 +934,24 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                           children: [
                             Text(
                               category.category as String,
-                              // style: TextStyle(fontSize: SizeConfig.w(14)),
                               style: AppTextStyles.bodyText(),
                             ),
-                            Text(
-                              "${percentage.toStringAsFixed(1)}% ₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
-                              // style: TextStyle(
-                              //   fontSize: SizeConfig.w(14),
-                              //   // fontWeight: FontWeight.w600,
-                              // ),
-                              style: AppTextStyles.bodyText(),
+                            Row(
+                              spacing: 5,
+                              children: [
+                                Text(
+                                  "${percentage.toStringAsFixed(1)}%",
+                                  style: AppTextStyles.bodyText(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  "₹${NumberFormat('#,##,###').format(categoryTotalAmount)}",
+                                  style: AppTextStyles.bodyText(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -614,7 +960,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                           value: percentage / 100,
                           backgroundColor: Colors.grey[200],
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.green.shade700,
+                            progressColor,
                           ),
                           minHeight: SizeConfig.h(6),
                           borderRadius: BorderRadius.circular(3),
@@ -630,6 +976,13 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
       );
     });
   }
+
+ Widget _buildDepartmentWiseSales(){
+    return Container(
+
+    );
+ }
+
 
   //  Highest Selling Products
   Widget highestSellingProduct(BuildContext context) {
@@ -651,8 +1004,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         final cardHeight = MediaQuery.of(context).size.width * .3;
 
         return Obx(() {
-          final topArticles =
-              topArticlesController.data.value?.data.take(7).toList() ?? [];
+          final topArticles = topArticlesController.data.value?.data.take(7).toList() ?? [];
           return SingleChildScrollView(
             child: Card(
               color: Colors.white,
@@ -905,254 +1257,6 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
     );
   }
 
-  // Widget _buildPromiseVsActual() {
-  //   final List<Map<String, dynamic>> staticDailyValues = [
-  //     {
-  //       "date": DateFormat('MMM yyyy').format(DateTime(2024, 7, 21)),
-  //       "day": "Sun",
-  //       "promise": 600000.0,
-  //       "actual": 580000.0,
-  //     },
-  //     {
-  //       "date": DateFormat('MMM yyyy').format(DateTime(2024, 7, 22)),
-  //       "day": "Mon",
-  //       "promise": 620000.0,
-  //       "actual": 630000.0,
-  //     },
-  //     {
-  //       "date": DateFormat('MMM yyyy').format(DateTime(2024, 7, 23)),
-  //       "day": "Tue",
-  //       "promise": 590000.0,
-  //       "actual": 550000.0,
-  //     },
-  //     {
-  //       "date": DateFormat('MMM yyyy').format(DateTime(2024, 7, 24)),
-  //       "day": "Wed",
-  //       "promise": 610000.0,
-  //       "actual": 610000.0,
-  //     },
-  //     {
-  //       "date": DateFormat('MMM yyyy').format(DateTime(2024, 7, 25)),
-  //       "day": "Thu",
-  //       "promise": 630000.0,
-  //       "actual": 650000.0,
-  //     },
-  //   ];
-  //
-  //   final int itemsPerPage = 4;
-  //
-  //   List<Map<String, dynamic>> currentData = [];
-  //
-  //   final startIndex = currentSet * itemsPerPage;
-  //   final endIndex = (startIndex + itemsPerPage < staticDailyValues.length)
-  //       ? startIndex + itemsPerPage
-  //       : staticDailyValues.length;
-  //
-  //   currentData = staticDailyValues.sublist(startIndex, endIndex).map((dv) {
-  //     final promise = (dv["promise"] as num).toDouble();
-  //     final actual = (dv["actual"] as num).toDouble();
-  //     final percent = promise > 0 ? ((actual / promise) * 100).round() : 0;
-  //
-  //     return {
-  //       "day": dv["day"],
-  //       "date": DateFormat(
-  //         'd/M',
-  //       ).format(DateFormat('MMM yyyy').parse(dv["date"])),
-  //       "promise": promise.toStringAsFixed(2),
-  //       "actual": actual.toStringAsFixed(2),
-  //       "percent": percent,
-  //     };
-  //   }).toList();
-  //
-  //   return Container(
-  //     width: double.infinity,
-  //     padding: EdgeInsets.all(SizeConfig.w(10)),
-  //     decoration: BoxDecoration(
-  //       color: Colors.white,
-  //       borderRadius: BorderRadius.circular(14),
-  //       boxShadow: const [
-  //         BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-  //       ],
-  //     ),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //           children: [
-  //             Text(
-  //               "Promise vs Actual",
-  //               style: TextStyle(
-  //                 fontWeight: FontWeight.bold,
-  //                 fontSize: SizeConfig.w(14),
-  //               ),
-  //             ),
-  //             if (staticDailyValues.isNotEmpty)
-  //               Row(
-  //                 children: [
-  //                   // IconButton(
-  //                   //   onPressed: currentSet > 0 ? goPrev : null,
-  //                   //   icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-  //                   // ),
-  //                   // Text(
-  //                   //   dateRange,
-  //                   //   style: TextStyle(fontSize: SizeConfig.w(10)),
-  //                   // ),
-  //                   // IconButton(
-  //                   //   onPressed: currentSet < totalSetsLocal - 1
-  //                   //       ? goNext
-  //                   //       : null,
-  //                   //   icon: const Icon(Icons.arrow_forward_ios, size: 18),
-  //                   // ),
-  //                 ],
-  //               ),
-  //           ],
-  //         ),
-  //         SizedBox(height: SizeConfig.h(4)),
-  //         SizedBox(
-  //           height: SizeConfig.h(224),
-  //           child: staticDailyValues.isEmpty
-  //               ? Center(
-  //             child: Text(
-  //               "No promise vs actual data for this month.",
-  //               style: TextStyle(
-  //                 fontSize: SizeConfig.w(16),
-  //                 fontWeight: FontWeight.bold,
-  //                 color: Colors.grey,
-  //               ),
-  //             ),
-  //           )
-  //               : ScrollConfiguration(
-  //             behavior: ScrollConfiguration.of(
-  //               context,
-  //             ).copyWith(scrollbars: false),
-  //             child: ListView.separated(
-  //               scrollDirection: Axis.horizontal,
-  //               padding: EdgeInsets.symmetric(
-  //                 horizontal: SizeConfig.w(10),
-  //               ),
-  //               itemCount: currentData.length,
-  //               separatorBuilder: (_, __) =>
-  //                   SizedBox(width: SizeConfig.w(10)),
-  //               itemBuilder: (context, index) {
-  //                 final item = currentData[index];
-  //                 final percent = item['percent'] as int;
-  //                 final color = percent >= 100
-  //                     ? Colors.green
-  //                     : percent >= 80
-  //                     ? Colors.orange
-  //                     : Colors.red;
-  //
-  //                 return _buildDailyPromiseActualCard(item, color);
-  //               },
-  //             ),
-  //           ),
-  //         ),
-  //         SizedBox(height: SizeConfig.h(16)),
-  //       ],
-  //     ),
-  //   );
-  // }
-  //
-  // Widget _buildDailyPromiseActualCard(Map<String, dynamic> item, Color color) {
-  //   return Align(
-  //     alignment: Alignment.center,
-  //     child: Container(
-  //       width: SizeConfig.w(160), // Adjust width as needed
-  //       padding: EdgeInsets.all(SizeConfig.w(6)),
-  //       decoration: BoxDecoration(
-  //         border: Border.all(color: color, width: 2),
-  //         borderRadius: BorderRadius.circular(14),
-  //       ),
-  //       child: Column(
-  //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-  //         crossAxisAlignment: CrossAxisAlignment.center,
-  //         children: [
-  //           Column(
-  //             children: [
-  //               Text(
-  //                 item['date'] as String,
-  //                 style: TextStyle(
-  //                   fontWeight: FontWeight.bold,
-  //                   fontSize: SizeConfig.w(14),
-  //                 ),
-  //               ),
-  //               SizedBox(height: SizeConfig.h(2)),
-  //               Text(
-  //                 item['day'] as String,
-  //                 style: TextStyle(
-  //                   color: Colors.grey,
-  //                   fontSize: SizeConfig.w(10),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           Column(
-  //             children: [
-  //               Text(
-  //                 "Promise",
-  //                 style: TextStyle(
-  //                   color: Colors.grey[700],
-  //                   fontSize: SizeConfig.w(11),
-  //                 ),
-  //               ),
-  //               SizedBox(height: SizeConfig.h(1.2)),
-  //               FittedBox(
-  //                 fit: BoxFit.scaleDown,
-  //                 child: Text(
-  //                   item['promise'] as String,
-  //                   style: TextStyle(
-  //                     fontWeight: FontWeight.bold,
-  //                     fontSize: SizeConfig.w(14),
-  //                   ),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           Column(
-  //             children: [
-  //               Text(
-  //                 "Actual",
-  //                 style: TextStyle(
-  //                   color: Colors.grey[700],
-  //                   fontSize: SizeConfig.w(11),
-  //                 ),
-  //               ),
-  //               SizedBox(height: SizeConfig.h(1.2)),
-  //               FittedBox(
-  //                 fit: BoxFit.scaleDown,
-  //                 child: Text(
-  //                   item['actual'] as String,
-  //                   style: TextStyle(
-  //                     fontWeight: FontWeight.bold,
-  //                     fontSize: SizeConfig.w(14),
-  //                   ),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           Container(
-  //             padding: EdgeInsets.symmetric(vertical: SizeConfig.h(3.2)),
-  //             decoration: BoxDecoration(
-  //               color: color.withOpacity(0.15),
-  //               borderRadius: BorderRadius.circular(14),
-  //             ),
-  //             child: Center(
-  //               child: Text(
-  //                 "${item['percent']}%",
-  //                 style: TextStyle(
-  //                   color: color,
-  //                   fontWeight: FontWeight.w700,
-  //                   fontSize: SizeConfig.w(14),
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildSalesComparisonCard() {
     return Card(
@@ -1231,8 +1335,8 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                       Expanded(
                         child: _buildInfoCard(
                           0,
-                          "Today's Sales",
-                          "₹${todaySales.toStringAsFixed(0)}",
+                          "Today",
+                          "₹${NumberFormat("#,##,###").format(todaySales)}",
                           null, // Keep the icon
                           null, // Keep the icon color
                         ),
@@ -1240,8 +1344,8 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                       Expanded(
                         child: _buildInfoCard(
                           0,
-                          "Yesterday's Sales",
-                          "₹${yesterdaySales.toStringAsFixed(0)}",
+                          "Yesterday",
+                          "₹${NumberFormat("#,##,###").format(yesterdaySales)}",
                           null, // Icon is optional, passing null
                           null, // Icon color is optional, passing null
                         ),
@@ -1593,11 +1697,9 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
   Widget _buildArticleWithMrpAndStockCard() {
     return Obx(() {
       if (articleController.isLoading.value) return _buildLoadingCard();
-      if (articleController.errorMessage.value.isNotEmpty)
-        return _buildErrorCard(articleController.errorMessage.value);
 
       // Filter articles based on search query
-      final articles = articleController.articles
+      final allArticles = articleController.articles
           .where(
             (article) =>
                 article.articleNo?.toLowerCase().contains(
@@ -1609,13 +1711,28 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                     ) ??
                 false,
           )
-          .take(5)
           .toList();
 
-      if (articles.isEmpty && _searchQuery.value.isEmpty)
+      // Limit to 10 articles for display
+      final displayArticles = allArticles.take(5).toList();
+
+      if (allArticles.isEmpty && _searchQuery.value.isEmpty) {
         return _buildEmptyCard("No articles available.");
-      if (articles.isEmpty)
+      }
+      if (allArticles.isEmpty) {
         return _buildEmptyCard("No articles match your search.");
+      }
+
+      // Calculate total price and total stock for all filtered articles
+      final totalPrice = articleController.articles.fold<double>(
+        0.0,
+        (sum, article) => sum + (article.itemMRP ?? 0.0),
+      );
+      final totalStock = articleController.articles.fold<int>(
+        0,
+        (sum, article) => sum + (article.stockQty ?? 0),
+      );
+
       return Card(
         color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
@@ -1627,8 +1744,7 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
               // Title
               Row(
                 children: [
-                  Icon(Icons.search, size: SizeConfig.w(20)),
-
+                  // Icon(Icons.search, size: SizeConfig.w(20)),
                   Text(
                     "Articles with MRP and Stock",
                     style: AppTextStyles.subheadlineText(),
@@ -1636,42 +1752,112 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                 ],
               ),
               SizedBox(height: SizeConfig.h(12)),
-              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  spacing: SizeConfig.w(10),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        // border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      height: 60,
+                      width: SizeConfig.w(160),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "₹${NumberFormat("#,##,##").format(totalPrice)}",
+                              style: AppTextStyles.subheadlineText(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Total Price",
+                              style: AppTextStyles.captionText(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        // border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      height: 60,
+                      width: SizeConfig.w(155),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              NumberFormat("#,##,##").format(totalStock),
+                              style: AppTextStyles.subheadlineText(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
 
+                            Text(
+                              "Total Stock",
+                              style: AppTextStyles.captionText(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               SizedBox(
-                height: 40,
+                height: 30,
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search by Article ID or Category',
-                    prefixIcon: Icon(Icons.search, size: SizeConfig.w(16)), // Reduced icon size
+                    prefixIcon: Icon(Icons.search, size: SizeConfig.w(16)),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6), // Slightly smaller border radius
-                      borderSide: BorderSide(color: Colors.grey[300]!, width: 1), // Thinner border
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
                     ),
                     contentPadding: EdgeInsets.symmetric(
-                      vertical: SizeConfig.h(3), // Reduced vertical padding
-                      horizontal: SizeConfig.w(8), // Reduced horizontal padding
+                      vertical: SizeConfig.h(3),
+                      horizontal: SizeConfig.w(8),
                     ),
                     filled: true,
                     fillColor: Colors.grey[100],
-                    hintStyle: AppTextStyles.bodyText(), // Smaller hint text
+                    hintStyle: AppTextStyles.bodyText(),
                   ),
-                  style: AppTextStyles.bodyText(), // Smaller input text
+                  style: AppTextStyles.bodyText(),
                   onChanged: (value) {
-                    _searchQuery.value = value; // Update search query reactively
+                    _searchQuery.value = value;
                   },
                 ),
-              ),              SizedBox(height: SizeConfig.h(12)),
+              ),
+              SizedBox(height: SizeConfig.h(12)),
               // Table
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: SizeConfig.w(300)),
                   child: DataTable(
-                    columnSpacing: SizeConfig.w(8),
-                    dataRowHeight: SizeConfig.h(40),
-                    headingRowHeight: SizeConfig.h(30),
+                    columnSpacing: SizeConfig.w(10),
+                    dataRowHeight: SizeConfig.h(60),
+                    headingRowHeight: SizeConfig.h(40),
                     horizontalMargin: SizeConfig.w(6),
                     columns: [
                       _buildTableHeader("Article ID", flex: 1),
@@ -1679,7 +1865,7 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                       _buildTableHeader("Price", flex: 1),
                       _buildTableHeader("Stock", flex: 1),
                     ],
-                    rows: articles
+                    rows: displayArticles
                         .map(
                           (article) => DataRow(
                             cells: [
@@ -1703,7 +1889,7 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                               ),
                               DataCell(
                                 Text(
-                                  "₹${article.itemMRP?.toStringAsFixed(2) ?? '0.00'}",
+                                  "₹${NumberFormat("#,##,##").format(article.itemMRP)}",
                                   style: AppTextStyles.bodyText(),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -1724,6 +1910,8 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Total Price and Stock
+              SizedBox(height: SizeConfig.h(12)),
             ],
           ),
         ),
@@ -1747,8 +1935,9 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
 
   Widget _buildLoadingCard() {
     return Card(
+      color: Colors.white,
       child: Padding(
-        padding: EdgeInsets.all(SizeConfig.w(12)),
+        padding: EdgeInsets.all(SizeConfig.w(5)),
         child: Center(child: CircularProgressIndicator()),
       ),
     );
@@ -1770,6 +1959,284 @@ class ArticleWithMrpAndStockCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(SizeConfig.w(12)),
         child: Center(child: Text(message, style: AppTextStyles.bodyText())),
+      ),
+    );
+  }
+}
+
+class RegionalSalesTrendsCard extends StatelessWidget {
+  const RegionalSalesTrendsCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<WeeklySalesTrendController>();
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      // else if (controller.errorMessage.value != null) {
+      //   return Center(
+      //     child: Text(
+      //       "Error: ${controller.errorMessage.value}",
+      //       style: const TextStyle(color: Colors.red),
+      //     ),
+      //   );
+      // } else if (controller.data.value == null) {
+      //   return const Center(child: Text("No data available"));
+      // }
+
+      final data = controller.data.value?.data!;
+      final thisWeek = data?.thisWeek
+          .map((e) => e.sales / 100000.0)
+          .toList(); // Convert to Lakhs
+      final lastWeek = data?.lastWeek
+          .map((e) => e.sales / 100000.0)
+          .toList(); // Convert to Lakhs
+      final target = List<double>.filled(
+        7,
+        data!.summary.thisWeekAverage / 100000.0,
+      );
+
+      final growthPercent =
+          ((data.summary.thisWeekTotal - data.summary.lastWeekTotal) /
+                  data.summary.lastWeekTotal *
+                  100)
+              .toStringAsFixed(1);
+
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        elevation: 1,
+        child: Padding(
+          padding: EdgeInsets.all(SizeConfig.w(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.trending_up,
+                        color: Colors.green,
+                        size: SizeConfig.w(20),
+                      ),
+                      SizedBox(width: SizeConfig.w(8)),
+                      Text(
+                        "Regional Sales Trends",
+                        style: AppTextStyles.subheadlineText(),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig.w(10),
+                      vertical: SizeConfig.h(4),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "7 Days",
+                      style: AppTextStyles.captionText(color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: SizeConfig.h(16)),
+
+              /// Line Chart
+              SizedBox(
+                height: SizeConfig.h(350),
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(show: true, horizontalInterval: 5),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 10,
+                          reservedSize: SizeConfig.w(40),
+                          getTitlesWidget: (value, _) => Text(
+                            "₹${value.toInt()}L",
+                            style: AppTextStyles.captionText(),
+                          ),
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, _) {
+                            const days = [
+                              'Mon',
+                              'Tue',
+                              'Wed',
+                              'Thu',
+                              'Fri',
+                              'Sat',
+                              'Sun',
+                            ];
+                            if (value.toInt() < days.length) {
+                              return Text(
+                                days[value.toInt()],
+                                style: AppTextStyles.captionText(),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      /// This Week
+                      LineChartBarData(
+                        spots: List.generate(
+                          thisWeek!.length,
+                          (i) => FlSpot(i.toDouble(), thisWeek[i]),
+                        ),
+                        isCurved: true,
+                        barWidth: 3,
+                        color: Colors.green,
+                        dotData: FlDotData(show: true),
+                      ),
+
+                      /// Last Week
+                      LineChartBarData(
+                        spots: List.generate(
+                          lastWeek!.length,
+                          (i) => FlSpot(i.toDouble(), lastWeek[i]),
+                        ),
+                        isCurved: true,
+                        barWidth: 2,
+                        color: Colors.grey[600],
+                        dashArray: [6, 4],
+                        dotData: FlDotData(show: true),
+                      ),
+
+                      /// Target Line
+                      LineChartBarData(
+                        spots: List.generate(
+                          target.length,
+                          (i) => FlSpot(i.toDouble(), target[i]),
+                        ),
+                        isCurved: false,
+                        barWidth: 2,
+                        color: Colors.green.shade400,
+                        dashArray: [4, 4],
+                        dotData: FlDotData(show: false),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: SizeConfig.h(12)),
+
+              /// Legends
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildLegend(Colors.green, "This Week"),
+                  SizedBox(width: SizeConfig.w(12)),
+                  _buildLegend(Colors.grey, "Last Week"),
+                  SizedBox(width: SizeConfig.w(12)),
+                  _buildLegend(Colors.green.shade400, "Target", dashed: true),
+                ],
+              ),
+
+              SizedBox(height: SizeConfig.h(16)),
+
+              /// Footer stats
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatBox(
+                    "₹${(data.summary.thisWeekAverage / 100000).toStringAsFixed(2)}L",
+                    "Avg This Week",
+                    Colors.green.shade50,
+                    Colors.green,
+                  ),
+                  _buildStatBox(
+                    "₹${(data.summary.lastWeekAverage / 100000).toStringAsFixed(2)}L",
+                    "Avg Last Week",
+                    Colors.grey.shade200,
+                    Colors.black,
+                  ),
+                  _buildStatBox(
+                    "${double.parse(growthPercent) >= 0 ? '+' : ''}$growthPercent%",
+                    "Growth",
+                    double.parse(growthPercent) >= 0
+                        ? Colors.green.shade50
+                        : Colors.red.shade50,
+                    double.parse(growthPercent) >= 0
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildLegend(Color color, String label, {bool dashed = false}) {
+    return Row(
+      children: [
+        Container(
+          width: SizeConfig.w(16),
+          height: SizeConfig.h(2),
+          decoration: BoxDecoration(
+            color: dashed ? Colors.transparent : color,
+            border: dashed ? Border.all(color: color, width: 1) : null,
+          ),
+        ),
+        SizedBox(width: SizeConfig.w(4)),
+        Text(label, style: AppTextStyles.captionText()),
+      ],
+    );
+  }
+
+  Widget _buildStatBox(
+    String value,
+    String label,
+    Color bgColor,
+    Color textColor,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: SizeConfig.w(16),
+        vertical: SizeConfig.h(12),
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: AppTextStyles.bodyText(
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          SizedBox(height: SizeConfig.h(4)),
+          Text(label, style: AppTextStyles.captionText(color: Colors.black54)),
+        ],
       ),
     );
   }

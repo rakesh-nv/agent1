@@ -8,6 +8,7 @@ class ReportingManagerController extends GetxController {
   var isLoading = false.obs;
   var errorMessage = Rx<String?>(null);
   var manager = Rx<String?>(null);
+
   @override
   void onInit() {
     super.onInit();
@@ -19,7 +20,10 @@ class ReportingManagerController extends GetxController {
     errorMessage(null);
     try {
       final response = await _apiService.fetchReportingManager();
-      print("-------------getReportingManager response---------:" + response.data.toString());
+      print(
+        "-------------getReportingManager response---------:" +
+            response.data!.name.toString(),
+      );
       manager.value = response.data?.name;
     } catch (e) {
       errorMessage(e.toString());

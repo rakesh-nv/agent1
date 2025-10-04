@@ -174,10 +174,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                               opacity: _fieldFadeAnimations[0],
                               child: Text(
                                 'Edit Profile',
-                                style: AppStyle.headTextStyle().copyWith(
-                                  fontSize: AppStyle.headFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTextStyles.headlineText(),
+                                // style: AppStyle.headTextStyle().copyWith(
+                                //   fontSize: AppStyle.headFontSize,
+                                //   fontWeight: FontWeight.bold,
+                                // ),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -416,9 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 Text(
                   value,
-                  style: AppStyle.normalTextStyle().copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.subheadlineText(),
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
@@ -578,7 +577,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
             Text(
               loginResponse.data!.user.name,
-              style: AppStyle.headTextStyle().copyWith(
+              style: AppTextStyles.headlineText(
                 color: AppStyle.appBarTextColor,
               ),
             ),
@@ -589,12 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   vertical: AppStyle.h(2),
                 ),
                 child: Chip(
-                  label: Text(
-                    'All Branches',
-                    style: AppStyle.normalTextStyle().copyWith(
-                      color: AppStyle.appBarColor,
-                    ),
-                  ),
+                  label: Text('All Branches', style: AppTextStyles.bodyText()),
                   backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -617,7 +611,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               onPressed: () => _showEditProfileBottomSheet(context),
               icon: Icon(Icons.edit, size: AppStyle.w(4).clamp(16.0, 20.0)),
-              label: Text('Edit Profile', style: AppStyle.normalTextStyle()),
+              label: Text(
+                'Edit Profile',
+                style: AppTextStyles.subheadlineText(),
+              ),
             ),
             SizedBox(height: AppStyle.h(2).clamp(10, 10)),
           ],
@@ -676,7 +673,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (loginResponse.timestamp != null &&
           loginResponse.timestamp!.isNotEmpty) {
         final dateTime = DateTime.parse(
-          loginResponse.data!.user.templateId.createdAt,
+          loginResponse.data!.user.createdAt,
         );
         formattedLastLogin = DateFormat('dd MMM yyyy').format(dateTime);
       }
@@ -704,11 +701,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               loginResponse.data!.user.userType,
             ),
             infoRow(
-              CupertinoIcons.person_2_square_stack,
-              "Branch",
+              CupertinoIcons.app_badge,
+              "Grade",
               loginResponse.data!.user.grade,
             ),
-            infoRow(CupertinoIcons.app_badge, "Grade", userId),
+            infoRow(CupertinoIcons.person_2_square_stack, "Branch", userId),
             if (loginResponse.data!.user.userType != 'head')
               infoRow(Icons.person_pin, "Reporting To", reportingTo),
             SizedBox(height: AppStyle.h(2).clamp(8.0, 16.0)),
@@ -732,7 +729,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   children: [
                     Text(
                       "Quick Stats",
-                      style: AppStyle.headTextStyle().copyWith(
+                      style: AppTextStyles.headlineText(
                         color: AppStyle.appBarTextColor,
                       ),
                     ),
@@ -743,14 +740,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                           0.0;
                       return Text(
                         "Total Sales This Month : ₹${thisMonthSales.toStringAsFixed(0)}",
-                        style: AppStyle.normalTextStyle().copyWith(
+                        style: AppTextStyles.subheadlineText(
                           color: AppStyle.appBarTextColor,
                         ),
                       );
                     }),
                     Text(
                       "Performance Rating : ₹${totalSalesController.myIncentive.value != null ? totalSalesController.myIncentive.value!.toStringAsFixed(2) : 'N/A'}",
-                      style: AppStyle.normalTextStyle().copyWith(
+                      style: AppTextStyles.subheadlineText(
                         color: AppStyle.appBarTextColor,
                       ),
                     ),

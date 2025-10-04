@@ -13,17 +13,24 @@ class TotalSalesController extends GetxController {
 
   var isLoading = false.obs;
   var errorMessage = Rx<String?>(null);
-  var salesData = Rx<SalesData?>(null);
+  var salesData = Rx<SalesData?>(null); // Daily sales data
+  var thisMonthSalesData = Rx<SalesData?>(null); // Monthly sales data
   var hasConnection = true.obs;
-  var myIncentive = Rx<double?>(null);
-  var totalPurchaseAmount = Rx<double?>(null);
-  var customersServed = Rx<int?>(null);
-  var netProfit = Rx<double?>(null);
+  var myIncentive = Rx<double?>(null); // Daily incentive
+  var myIncentiveThisMonth = Rx<double?>(null); // Monthly incentive
+  var totalPurchaseAmountDaily = Rx<double?>(null); // Daily purchase amount
+  var totalPurchaseAmountMonthly = Rx<double?>(null); // Monthly purchase amount
+  var customersServedDaily = Rx<int?>(null); // Daily customers served
+  var customersServedMonthly = Rx<int?>(null); // Monthly customers served
+  var netProfitDaily = Rx<double?>(null); // Daily net profit
+  var netProfitMonthly = Rx<double?>(null); // Monthly net profit
   var incentiveError = Rx<String?>(null);
 
-  TotalSalesController({SalesApiService? apiService, Connectivity? connectivity})
-    : _apiService = apiService ?? SalesApiService(),
-      _connectivity = connectivity ?? Connectivity() {
+  TotalSalesController({
+    SalesApiService? apiService,
+    Connectivity? connectivity,
+  }) : _apiService = apiService ?? SalesApiService(),
+        _connectivity = connectivity ?? Connectivity() {
     _initConnectivity();
   }
 
@@ -46,8 +53,8 @@ class TotalSalesController extends GetxController {
       }
 
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
-        List<ConnectivityResult> results,
-      ) {
+          List<ConnectivityResult> results,
+          ) {
         if (results.isNotEmpty) {
           _updateConnectionStatus(results.first);
         }
@@ -64,6 +71,7 @@ class TotalSalesController extends GetxController {
       // Automatically retry fetch when connection is restored
       if (hasConnection.value && errorMessage.value != null) {
         // fetchTodaysSales();
+        // fetchThisMonthSales();
       }
     }
   }
@@ -89,12 +97,13 @@ class TotalSalesController extends GetxController {
       salesData.value = response.data;
       debugPrint('Successfully fetched today\'s sales data');
 
-      // Update new metrics
-      totalPurchaseAmount.value = response.data.totalPurchaseAmount;
-      customersServed.value = response.data.customersServed;
-      netProfit.value = response.data.netProfit;
-      // Calculate incentive after successful fetch
-      _calculateMyIncentive();
+      // Update daily metrics
+      totalPurchaseAmountDaily.value = response.data.totalPurchaseAmount;
+      customersServedDaily.value = response.data.customersServed;
+      netProfitDaily.value = response.data.netProfit;
+
+      // Calculate daily incentive
+      await _calculateMyIncentive();
     } catch (e) {
       errorMessage.value = e.toString();
       debugPrint('Error fetching today\'s sales: $e');
@@ -107,51 +116,122 @@ class TotalSalesController extends GetxController {
     }
   }
 
+  Future<void> fetchThisMonthSales() async {
+    if (!hasConnection.value) {
+      errorMessage.value = 'No internet connection available';
+      return;
+    }
+
+    isLoading(true);
+    errorMessage(null);
+
+    try {
+      debugPrint('Fetching this month\'s sales data...');
+      final response = await _apiService.fetchThisMonthSales().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Request timed out after 15 seconds');
+        },
+      );
+      thisMonthSalesData.value = response.data;
+
+      print("rest");
+      print(thisMonthSalesData.value);
+      // Update monthly metrics
+      totalPurchaseAmountMonthly.value = response.data.totalPurchaseAmount;
+      customersServedMonthly.value = response.data.customersServed;
+      netProfitMonthly.value = response.data.netProfit;
+
+      // Calculate monthly incentive
+      await _calculateMyIncentiveThisMonth();
+    } catch (e) {
+      errorMessage.value = e.toString();
+      debugPrint('Error fetching this month\'s sales: $e');
+
+      if (e.toString().contains('401')) {
+        errorMessage.value = 'Session expired. Please login again.';
+      }
+    } finally {
+      isLoading(false);
+    }
+  }
+
   Future<void> _calculateMyIncentive() async {
     if (salesData.value == null) {
-      incentiveError.value = 'No sales data available';
+      incentiveError.value = 'No daily sales data available';
       myIncentive.value = null;
       return;
     }
 
     try {
-      final myRole = await _getCurrentUserRole(); // Implement this method
-      final staffCount = await _getStaffCount(); // Implement this method
+      final myRole = await _getCurrentUserRole();
+      final staffCount = await _getStaffCount();
 
       if (myRole == null || staffCount == null) {
         throw Exception('Could not determine user role or staff count');
       }
 
-      print("totalNetAmount" + salesData.value!.totalNetAmount.toString());
-      print("stafcount" + staffCount.toString());
-      print("myRole" + myRole.toString());
+      debugPrint("Daily totalNetAmount: ${salesData.value!.totalNetAmount}");
+      debugPrint("Staff count: $staffCount");
+      debugPrint("My role: $myRole");
+
       myIncentive.value = _calculateIncentive(
-        netSales: salesData.value!.totalNetAmount,
+        netSales: salesData.value!.totalNetSlsValue,
         staffCount: staffCount,
         myRole: myRole,
       );
-      print(myIncentive.value);
-      // incentiveError.value = null;
+
+      debugPrint("Daily incentive: ${myIncentive.value}");
+      incentiveError.value = null;
     } catch (e) {
       incentiveError.value = e.toString();
       myIncentive.value = null;
-      debugPrint('Error calculating incentive: $e');
+      debugPrint('Error calculating daily incentive: $e');
+    }
+  }
+
+  Future<void> _calculateMyIncentiveThisMonth() async {
+    if (thisMonthSalesData.value == null) {
+      incentiveError.value = 'No monthly sales data available';
+      myIncentiveThisMonth.value = null;
+      return;
+    }
+
+    try {
+      final myRole = await _getCurrentUserRole();
+      final staffCount = await _getStaffCount();
+
+      if (myRole == null || staffCount == null) {
+        throw Exception('Could not determine user role or staff count');
+      }
+
+      debugPrint("Monthly totalNetAmount: ${thisMonthSalesData.value!.totalNetAmount}");
+      debugPrint("Staff count: $staffCount");
+      debugPrint("My role: $myRole");
+
+      myIncentiveThisMonth.value = _calculateIncentive(
+        netSales: thisMonthSalesData.value!.totalNetAmount,
+        staffCount: staffCount,
+        myRole: myRole,
+        target: 5000.0, // Example monthly target
+      );
+
+      debugPrint("Monthly incentive: ${myIncentiveThisMonth.value}");
+      incentiveError.value = null;
+    } catch (e) {
+      incentiveError.value = e.toString();
+      myIncentiveThisMonth.value = null;
+      debugPrint('Error calculating monthly incentive: $e');
     }
   }
 
   Future<String?> _getCurrentUserRole() async {
     final box = Hive.box('myBox');
-    return box.get('userType'); // Assuming 'user_role' is stored in Hive
+    return box.get('userType'); // Assuming 'userType' is stored in Hive
   }
 
-  // Future<Map<String, int>?> _getStaffCount() async {
-  //   // This will likely involve another API call or a more complex logic.
-  //   // For now, returning a placeholder.
-  //   return {'Manager': 1, 'Cashier': 2, 'SalesPerson': 3};
-  // }
   Future<Map<String, int>?> _getStaffCount() async {
-    // This will likely involve another API call or a more complex logic.
-    // For now, returning a placeholder.
+    // Placeholder for staff count; replace with actual API call if needed
     return {'Manager': 1, 'Cashier': 2, 'SalesPerson': 3};
   }
 
@@ -191,10 +271,10 @@ class TotalSalesController extends GetxController {
     }
 
     final double partValue = totalIncentivePool / totalParts;
-
     final double myParts = partsPerPerson[_normalizeRole(myRole)] ?? 1.00;
 
-    return myParts * partValue;
+    // return myParts * partValue;
+    return netSales * 0.01;
   }
 
   String _normalizeRole(String role) {

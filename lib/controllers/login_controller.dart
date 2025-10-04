@@ -47,27 +47,27 @@ class LoginController extends GetxController {
 
   /// Save user data in SharedPreferences
   Future<void> _saveUserData(
-    String token,
-    String email,
-    String password,
-    String userType,
-    String branch,
-    String grade,
-    String id,
-    String name,
-    String mobile,
-    String reportingTo,
-    bool isAllBranches,
-    bool isAllCategories,
-    List<String> selectedBranches,
-    List<String> selectedCategories,
-    List<String> selectedBranchAliases,
-    List<String> selectedCategoryNames,
-    String templateIdId,
-    String templateIdName,
-    bool isBlocked,
-    String lastLogin,
-  ) async {
+      String token,
+      String email,
+      String password,
+      String userType,
+      String branch,
+      String grade,
+      String id,
+      String name,
+      String mobile,
+      String reportingTo,
+      bool isAllBranches,
+      bool isAllCategories,
+      List<String> selectedBranches,
+      List<String> selectedCategories,
+      List<String> selectedBranchAliases,
+      List<String> selectedCategoryNames,
+      String templateIdId,
+      String templateIdName,
+      bool isBlocked,
+      String lastLogin,
+      ) async {
     final box = Hive.box('myBox');
     await box.put(AppConstants.keyToken, token);
     await box.put(AppConstants.keyEmail, email);

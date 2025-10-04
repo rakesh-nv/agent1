@@ -17,7 +17,7 @@ class ApiService {
       // Get the token from Hive
       final box = Hive.box('myBox');
       final token = box.get(AppConstants.keyToken) ?? ''; // Use AppConstants.keyToken
-      final branch = box.get(AppConstants.branch);
+      // final branch = box.get(AppConstants.branch);
       // print("f//////" + token);
       // if (token.isEmpty) {
       //   print("empty");
@@ -25,7 +25,7 @@ class ApiService {
       // }
 
       // Prepare request body for today's sales only
-      final requestBody = jsonEncode({"branch": branch, "preset": "today"});
+      final requestBody = jsonEncode({"preset": "today"});
       // debugPrint('Requesting category sales with body: $requestBody');
 
       // Make POST request
@@ -37,7 +37,9 @@ class ApiService {
         },
         body: requestBody,
       );
-      debugPrint('---------------categoryWiseSales ---------------: ${response.body}');
+      debugPrint(
+        '---------------categoryWiseSales ---------------: ${response.body}',
+      );
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         return categoryWiseSalesModal.fromJson(jsonData);

@@ -5,13 +5,14 @@ import '../model/profile_update_model.dart';
 import '../model/login_model.dart';
 
 class ProfileController extends GetxController {
-  var isLoading = false.obs;
-  var errorMessage = Rx<String?>(null);
-  var profileData = Rx<ProfileUpdateData?>(null);
+  final isLoading = false.obs;
+  final errorMessage = Rx<String?>(null);
+  final profileData = Rx<ProfileUpdateData?>(null);
 
   final _apiService = ProfileUpdateApiServices();
   final LoginController _loginController = Get.find<LoginController>();
 
+  /// Updates profile data both on server and locally
   Future<void> updateProfile({
     required String id,
     required String name,
@@ -20,6 +21,7 @@ class ProfileController extends GetxController {
   }) async {
     isLoading(true);
     errorMessage(null);
+
     try {
       final response = await _apiService.updateProfile(
         id: id,
@@ -30,9 +32,13 @@ class ProfileController extends GetxController {
 
       if (response != null && response.success) {
         profileData.value = response.data;
-        // Update LoginController's user data as well
-        if (response.data != null && _loginController.loginResponse.value != null) {
-          final currentLoginUser = _loginController.loginResponse.value!.data!.user;
+
+        // ✅ Update the LoginController’s stored user data
+        if (_loginController.loginResponse.value?.data?.user != null) {
+          final currentLoginUser =
+              _loginController.loginResponse.value!.data!.user;
+
+          // Create a new updated User object with new profile data
           final updatedUser = User(
             id: currentLoginUser.id,
             name: name,
@@ -50,14 +56,22 @@ class ProfileController extends GetxController {
             templateId: currentLoginUser.templateId,
             isBlocked: currentLoginUser.isBlocked,
             lastLogin: currentLoginUser.lastLogin,
+            createdAt:currentLoginUser.createdAt,
+            updatedAt: currentLoginUser.updatedAt,
           );
+
+          // 🔁 Update stored login data in Hive
           await _loginController.updateLoginResponseUserData(updatedUser);
         }
       } else {
-        errorMessage("Failed to update profile");
+        errorMessage("Failed to update profile. Please try again.");
       }
     } catch (e) {
-      errorMessage(e.toString());
+      if (e.toString().contains("SocketException")) {
+        errorMessage("No Internet connection. Please check your network.");
+      } else {
+        errorMessage("Error updating profile: ${e.toString()}");
+      }
     } finally {
       isLoading(false);
     }

@@ -1,23 +1,26 @@
-import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
-import 'package:mbindiamy/api_services/branch/branch_promise_with_actual_api_services.dart';
-import 'package:mbindiamy/model/branch_wise_sales_model/atual_vs_promise_branch_model.dart'
-    as BranchModel;
-import 'package:mbindiamy/utils/app_constants.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
+import '../api_services/branch/branch_promise_with_actual_api_services.dart';
+import '../model/branch_wise_sales_model/atual_vs_promise_branch_model.dart' as BranchModel;
+import 'package:get/get.dart';
+
+import '../utils/app_constants.dart';
 class PromiseActualController extends GetxController {
   final isLoading = false.obs;
   final errorMessage = Rx<String?>(null);
   final data = Rx<BranchModel.PromiseActualResponse?>(null);
 
-  final currentData = <Map<String, dynamic>>[].obs; // full month data
-  final filteredData = <Map<String, dynamic>>[].obs; // 👈 only up to today
+  final currentData = <Map<String, dynamic>>[].obs;
+  final filteredData = <Map<String, dynamic>>[].obs;
 
   var currentYear = DateTime.now().year.obs;
   var currentMonth = DateTime.now().month.obs;
 
   final _api = PromiseWithActualApi();
+
+  /// 👇 Add variable to hold sum of current month's promise
+  final monthPromiseSum = 0.0.obs;
 
   @override
   void onInit() {
@@ -32,35 +35,33 @@ class PromiseActualController extends GetxController {
     try {
       final box = Hive.box('myBox');
       final branch = box.get(AppConstants.branch);
-      // final token = box.get(AppConstants.keyToken);
 
-      // if (branch == null || branch.isEmpty) {
-      //   errorMessage.value = "No branch available from login";
-      //   return;
-      // }
-      // if (token == null || token.isEmpty) {
-      //   errorMessage.value = "No token available from login";
-      //   return;
-      // }
-
-      // Fetch current month and previous month, then merge for last 7 days
       final int yearNow = currentYear.value;
-      final int monthNow = currentMonth.value; // 1..12
+      final int monthNow = currentMonth.value;
       final int prevMonth = monthNow == 1 ? 12 : monthNow - 1;
       final int prevYear = monthNow == 1 ? yearNow - 1 : yearNow;
 
       final BranchModel.PromiseActualResponse currentResp = await _api
           .fetchPromiseWithActual(
-            year: yearNow,
-            month: monthNow,
-            branch: branch,
-          );
+        year: yearNow,
+        month: monthNow,
+        branch: branch,
+      );
       final BranchModel.PromiseActualResponse prevResp = await _api
           .fetchPromiseWithActual(
-            year: prevYear,
-            month: prevMonth,
-            branch: branch,
-          );
+        year: prevYear,
+        month: prevMonth,
+        branch: branch,
+      );
+
+      /// ✅ Calculate total promise of current month
+      double totalPromise = 0.0;
+      for (final loc in currentResp.data.locations) {
+        for (final dv in loc.dailyValues) {
+          totalPromise += dv.promise.toDouble();
+        }
+      }
+      monthPromiseSum.value = totalPromise; // 👈 stored in variable
 
       // Merge daily values across locations for both months into a date map
       final Map<String, Map<String, double>> byDate = {};
@@ -72,13 +73,11 @@ class PromiseActualController extends GetxController {
               final String key = DateFormat('yyyy-MM-dd').format(dt);
               final agg = byDate.putIfAbsent(
                 key,
-                () => {"promise": 0.0, "actual": 0.0},
+                    () => {"promise": 0.0, "actual": 0.0},
               );
               agg["promise"] = (agg["promise"] ?? 0) + (dv.promise.toDouble());
               agg["actual"] = (agg["actual"] ?? 0) + (dv.actual.toDouble());
-            } catch (_) {
-              // ignore parse errors
-            }
+            } catch (_) {}
           }
         }
       }
@@ -86,13 +85,13 @@ class PromiseActualController extends GetxController {
       addResponse(prevResp);
       addResponse(currentResp);
 
-      // Build last 7 days window up to today, include zeros if missing
       final DateTime today = DateTime.now();
       final DateTime start = DateTime(
         today.year,
         today.month,
         today.day,
       ).subtract(const Duration(days: 6));
+
       final List<Map<String, dynamic>> last7 = [];
       for (int i = 0; i < 7; i++) {
         final DateTime d = start.add(Duration(days: i));
@@ -111,34 +110,31 @@ class PromiseActualController extends GetxController {
         });
       }
 
-      // Also store current month list if needed for other views (optional)
       currentData
         ..clear()
         ..addAll(last7);
 
-      // For widget consumption, provide formatted strings (compact e.g. 500k)
       final compact = NumberFormat.compact();
       filteredData.value = last7
           .map(
             (e) => {
-              'date': e['date'],
-              'promise': compact.format((e['promise'] as double)).toLowerCase(),
-              'actual': compact.format((e['actual'] as double)).toLowerCase(),
-              'percent': e['percent'],
-            },
-          )
+          'date': e['date'],
+          'promise': compact.format((e['promise'] as double)).toLowerCase(),
+          'actual': compact.format((e['actual'] as double)).toLowerCase(),
+          'percent': e['percent'],
+        },
+      )
           .toList();
     } catch (e) {
       errorMessage.value = e.toString();
       data.value = null;
       currentData.clear();
       filteredData.clear();
+      monthPromiseSum.value = 0.0; // reset on error
     } finally {
       isLoading(false);
     }
   }
-
-  // Removed old filtered updater; merged last-7 is computed directly in load
 
   void changePeriod(int year, int month) {
     currentYear.value = year;
